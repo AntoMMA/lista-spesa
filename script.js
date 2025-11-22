@@ -13,7 +13,9 @@ const db = firebase.firestore();
 
 async function saveCatalogFirestore() {
   try {
-    await db.collection("catalogo").doc("prodotti").set({ items: catalogo });
+    // Ordina il catalogo prima di salvarlo per mantenere l'ordine
+    const sortedCatalogo = catalogo.sort((a, b) => a.nome.localeCompare(b.nome));
+    await db.collection("catalogo").doc("prodotti").set({ items: sortedCatalogo });
     console.log("Catalogo aggiornato su Firestore");
   } catch (err) {
     console.error("Errore salvataggio catalogo:", err);
@@ -93,102 +95,33 @@ function showPDFNoteInput(callback) {
     pdfNoteConfirmBtn.removeEventListener("click", confirmHandler);
     callback();
   };
-
+  
+  // Rimuovi eventuali listener precedenti e aggiungi il nuovo
+  pdfNoteConfirmBtn.onclick = null;
   pdfNoteConfirmBtn.addEventListener("click", confirmHandler);
 }
 
-/* -------------- INIZIALIZZA UI -------------- */
-renderCatalog(catalogo);
-updateCount();
-renderShopping();
-
-/* -------------- EVENTI -------------- */
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.trim().toLowerCase();
-  const filtered = catalogo.filter(p =>
-    p.nome.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q)
-  );
-  renderCatalog(filtered);
-});
-
-addManualBtn.addEventListener("click", async () => {
-  const val = manualInput.value.trim();
-  if (!val) return;
-
-  // Controlla se esiste già nel catalogo (ignorando maiuscole/minuscole)
-  if (!catalogo.some(p => p.nome.toLowerCase() === val.toLowerCase())) {
-    // Aggiungi automaticamente al catalogo con categoria "Altro"
-    catalogo.push({ categoria: "Altro", nome: val });
-
-    // Salva il catalogo aggiornato su Firestore
-    await saveCatalogFirestore();
-
-    // Aggiorna la UI del catalogo
-    renderCatalog(catalogo);
-  }
-
-  // Aggiungi alla lista della spesa
-  addItemToShopping(val);
-  manualInput.value = "";
-});
-
-saveBtn.addEventListener("click", saveList);
-loadBtn.addEventListener("click", loadLists);
-downloadBtn.addEventListener("click", () => {
-  showPDFNoteInput(() => {
-    downloadStyledPDF();
-  });
-});
-
-shareBtn.addEventListener("click", () => {
-  showPDFNoteInput(() => {
-    sharePDF();
-  });
-});
-clearBtn.addEventListener("click", () => {
-  if (!confirm("Vuoi davvero svuotare la lista corrente?")) return;
-  shopping = [];
-  renderShopping();
-});
+/* -------------- UTILITY: persistenza locale -------------- */
+// salva automaticamente in localStorage per mantenere la lista tra refresh
+function persistLocal() {
+  try { localStorage.setItem("shopping_local_v1", JSON.stringify(shopping)); } catch(e){}
+}
+function restoreLocal() {
+  try {
+    const s = localStorage.getItem("shopping_local_v1");
+    if (s) { shopping = JSON.parse(s); } // non chiamare renderShopping qui, sarà chiamato dopo.
+  } catch(e){}
+}
 
 /* -------------- FUNZIONI UI -------------- */
-function renderCatalog(items) {
-  // raggruppa per categoria
-  const groups = items.reduce((acc, cur) => {
-    (acc[cur.categoria] = acc[cur.categoria] || []).push(cur);
-    return acc;
-  }, {});
-  catalogList.innerHTML = "";
-  for (const cat of Object.keys(groups)) {
-    const section = document.createElement("div");
-    section.className = "cat-section";
-    section.innerHTML = `<div class="cat-title">${cat}</div>`;
-    groups[cat].forEach(prod => {
-      const el = document.createElement("div");
-      el.className = "prod";
-      el.innerHTML = `<div class="meta"><strong>${prod.nome}</strong><small>${prod.categoria}</small></div><div class="add">+</div>`;
-      el.addEventListener("click", () => addItemToShopping(prod.nome));
-      section.appendChild(el);
-    });
-    catalogList.appendChild(section);
-  }
-}
 
-function addItemToShopping(name) {
-  // se esiste incrementa qty
-  const idx = shopping.findIndex(s => s.nome.toLowerCase() === name.toLowerCase());
-  if (idx >= 0) {
-    shopping[idx].qty += 1;
-  } else {
-    shopping.push({ nome: name, qty: 1, done: false });
-  }
-  renderShopping();
-}
-
-function renderShopping() {
+// Sovrascritta per includere l'aggiornamento del count e la persistenza locale
+const originalRenderShopping = function() {
   shoppingItemsEl.innerHTML = "";
   shopping.forEach((it, i) => {
     const li = document.createElement("li");
+    li.classList.toggle("done", it.done); // Aggiunge/Rimuove la classe CSS .done
+    
     li.innerHTML = `
       <div class="left">
         <input type="checkbox" ${it.done ? "checked" : ""} data-index="${i}" />
@@ -203,16 +136,17 @@ function renderShopping() {
         <button data-action="del" data-index="${i}">✖</button>
       </div>
     `;
-    // eventi
+    
+    // Gestione eventi: l'indice viene gestito tramite data-attribute
     li.querySelector('input[type="checkbox"]').addEventListener("change", e => {
       const idx = +e.target.dataset.index;
       shopping[idx].done = e.target.checked;
-      renderShopping();
+      renderShopping(); // Ricarica la lista per applicare lo stile .done
     });
     li.querySelector('button[data-action="dec"]').addEventListener("click", e => {
       const idx = +e.target.dataset.index;
       if (shopping[idx].qty > 1) shopping[idx].qty--;
-      else shopping.splice(idx,1);
+      else shopping.splice(idx,1); // Rimuovi se qty è 1 e decresce
       renderShopping();
     });
     li.querySelector('button[data-action="inc"]').addEventListener("click", e => {
@@ -225,10 +159,64 @@ function renderShopping() {
       shopping.splice(idx,1);
       renderShopping();
     });
-
+    
     shoppingItemsEl.appendChild(li);
   });
+  
   updateCount();
+  persistLocal(); // Salva dopo ogni modifica alla lista
+};
+
+// Funzione globale che viene utilizzata
+function renderShopping() {
+    originalRenderShopping();
+}
+
+
+function renderCatalog(items) {
+  // raggruppa per categoria
+  const groups = items.reduce((acc, cur) => {
+    (acc[cur.categoria] = acc[cur.categoria] || []).push(cur);
+    return acc;
+  }, {});
+  catalogList.innerHTML = "";
+  
+  // Ordina le categorie
+  const sortedCategories = Object.keys(groups).sort((a,b) => {
+    // Mette la categoria "Altro" alla fine
+    if (a === "Altro") return 1;
+    if (b === "Altro") return -1;
+    return a.localeCompare(b);
+  });
+  
+  for (const cat of sortedCategories) {
+    const section = document.createElement("div");
+    section.className = "cat-section";
+    section.innerHTML = `<div class="cat-title">${cat}</div>`;
+    
+    // Ordina i prodotti all'interno della categoria
+    groups[cat].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(prod => {
+      const el = document.createElement("div");
+      el.className = "prod";
+      // CORREZIONE: Aggiunto l'elemento .meta come previsto dal CSS
+      el.innerHTML = `<div class="meta"><strong>${prod.nome}</strong><small>${prod.categoria}</small></div><div class="add">+</div>`;
+      el.addEventListener("click", () => addItemToShopping(prod.nome));
+      section.appendChild(el);
+    });
+    catalogList.appendChild(section);
+  }
+}
+
+function addItemToShopping(name) {
+  // se esiste incrementa qty
+  const idx = shopping.findIndex(s => s.nome.toLowerCase() === name.toLowerCase());
+  if (idx >= 0) {
+    shopping[idx].qty += 1;
+  } else {
+    // Aggiungi un nuovo articolo non spuntato
+    shopping.push({ nome: name, qty: 1, done: false });
+  }
+  renderShopping();
 }
 
 function updateCount() {
@@ -243,9 +231,12 @@ async function saveList() {
     return;
   }
   try {
+    // Ordina la lista da salvare: prima non spuntati, poi spuntati
+    const listToSave = [...shopping].sort((a, b) => (a.done === b.done) ? 0 : a.done ? 1 : -1);
+    
     const doc = await db.collection("liste_spesa").add({
-      items: shopping,
-      createdAt: new Date()
+      items: listToSave,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp() // Usa il timestamp del server
     });
     alert("Lista salvata su Firestore!");
     loadLists(); // aggiorna elenco salvato
@@ -264,19 +255,20 @@ async function loadLists() {
       const id = doc.id;
       const div = document.createElement("div");
       div.className = "saved-item";
-      const date = data.createdAt && data.createdAt.toDate ? data.createdAt.toDate() : new Date();
+      // Gestione sicura del campo data che può essere un oggetto Firebase Timestamp o un oggetto Data JS
+      const date = (data.createdAt && data.createdAt.toDate) ? data.createdAt.toDate() : new Date();
       div.innerHTML = `
         <div>
           <div><strong>${date.toLocaleString()}</strong></div>
           <div class="meta">${(data.items || []).length} articoli</div>
         </div>
         <div class="btns">
-          <button data-load="${id}">Carica</button>
-          <button data-delete="${id}">Elimina</button>
+          <button class="button" data-load="${id}">Carica</button>
+          <button class="button danger" data-delete="${id}">Elimina</button>
         </div>
       `;
       div.querySelector('[data-load]').addEventListener("click", async () => {
-        shopping = (data.items || []).map(x => ({ ...x })); // clone
+        shopping = (data.items || []).map(x => ({ ...x })); // clone profonda
         renderShopping();
         window.scrollTo({ top: 0, behavior: "smooth" });
       });
@@ -291,22 +283,58 @@ async function loadLists() {
       });
       savedListsEl.appendChild(div);
     });
-    if (!savedListsEl.hasChildNodes()) savedListsEl.innerHTML = "<div style='color:var(--muted);padding:8px'>Nessuna lista salvata</div>";
+    if (!savedListsEl.hasChildNodes()) savedListsEl.innerHTML = "<div style='color:var(--muted-color);padding:8px'>Nessuna lista salvata</div>";
   } catch (err) {
     console.error(err);
     alert("Errore nel caricamento: " + (err.message || err));
   }
 }
 
-/* -------------- PDF: DOWNLOAD E SHARE -------------- */
-function buildTextFromShopping() {
-  if (shopping.length === 0) return "Lista vuota";
-  return shopping.map(it => `- ${it.nome} x${it.qty}${it.done ? " (Da prendere)" : ""}`).join("\n");
+
+/* -------------- PDF: FUNZIONI UTILITY -------------- */
+
+/**
+ * Costruisce l'array di linee per il PDF, raggruppando gli articoli per categoria.
+ * @returns {string[]} Un array di stringhe, dove ogni stringa è una riga del PDF.
+ */
+function buildPDFContent() {
+  if (shopping.length === 0) return ["Lista vuota"];
+
+  // 1. Raggruppa per categoria
+  const grouped = shopping.reduce((acc, item) => {
+    const category = catalogo.find(c => c.nome.toLowerCase() === item.nome.toLowerCase())?.categoria || "Altro";
+    (acc[category] = acc[category] || []).push(item);
+    return acc;
+  }, {});
+
+  const lines = [];
+  
+  // 2. Ordina categorie (Altro per ultimo)
+  const sortedCategories = Object.keys(grouped).sort((a,b) => {
+    if (a === "Altro") return 1;
+    if (b === "Altro") return -1;
+    return a.localeCompare(b);
+  });
+
+  // 3. Formatta le linee
+  for (const cat of sortedCategories) {
+    lines.push(`-- ${cat.toUpperCase()} --`); // Inizio categoria
+    grouped[cat].forEach(item => {
+      const checkbox = item.done ? "[X]" : "[ ]";
+      lines.push(`${checkbox} ${item.nome} x${item.qty}`);
+    });
+    lines.push(""); // Spazio dopo ogni categoria
+  }
+  
+  return lines;
 }
+
+/* -------------- PDF: DOWNLOAD E SHARE -------------- */
 
 function downloadStyledPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  let y = 30; // Coordinata Y iniziale per il contenuto
 
   // sfondo pagina
   doc.setFillColor(15, 23, 36);
@@ -315,22 +343,29 @@ function downloadStyledPDF() {
   // titolo
   doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
-  doc.text("🛒 Lista della Spesa", 105, 20, { align: "center" });
+  doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
 
-// aggiungi testo personalizzato in cima al PDF, se presente
-if(pdfNote){
-  doc.setFontSize(14);
-  doc.setTextColor(255,200,50); // colore a contrasto
-  doc.text(pdfNote, 14, y);
-  y += 12; // lascia un po' di spazio tra testo e lista
-}
-  
+  // aggiungi testo personalizzato in cima al PDF, se presente
+  if(pdfNote){
+    doc.setFontSize(14);
+    doc.setTextColor(255,200,50); // colore a contrasto
+    doc.text(pdfNote, 14, y);
+    y += 12; // lascia un po' di spazio tra testo e lista
+  }
+    
   // contenuto
   doc.setFontSize(12);
+  doc.setTextColor(255, 255, 255); // Reset colore testo per la lista
   const lines = buildPDFContent();
-  let y = 30;
   lines.forEach(line => {
-    doc.text(line, 14, y);
+    // Se è un titolo di categoria, usa un colore diverso
+    if (line.startsWith("--")) {
+        doc.setTextColor(0, 255, 255); // Ciano per le categorie
+        doc.text(line, 14, y);
+        doc.setTextColor(255, 255, 255); // Reset
+    } else {
+        doc.text(line, 14, y);
+    }
     y += 8;
     if (y > 280) { doc.addPage(); y = 20; }
   });
@@ -341,24 +376,39 @@ if(pdfNote){
 async function sharePDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  let y = 30; // Coordinata Y iniziale per il contenuto
 
   // sfondo pagina
-  doc.setFillColor(15, 23, 36); // colore sfondo simile al sito
+  doc.setFillColor(15, 23, 36);
   doc.rect(0, 0, 210, 297, "F");
 
   // titolo
   doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
-  doc.text("🛒 Lista della Spesa", 105, 20, { align: "center" });
+  doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
+
+  // aggiungi testo personalizzato in cima al PDF, se presente
+  if(pdfNote){
+    doc.setFontSize(14);
+    doc.setTextColor(255,200,50); // colore a contrasto
+    doc.text(pdfNote, 14, y);
+    y += 12; // lascia un po' di spazio tra testo e lista
+  }
 
   // contenuto
   doc.setFontSize(12);
-  const lines = buildPDFContent(); // funzione già definita per raggruppare per categoria e aggiungere checkbox
-  let y = 30;
+  doc.setTextColor(255, 255, 255); // Reset colore testo
+  const lines = buildPDFContent();
   lines.forEach(line => {
-    doc.text(line, 14, y);
+    if (line.startsWith("--")) {
+        doc.setTextColor(0, 255, 255); 
+        doc.text(line, 14, y);
+        doc.setTextColor(255, 255, 255); 
+    } else {
+        doc.text(line, 14, y);
+    }
     y += 8;
-    if (y > 280) { // nuova pagina se necessario
+    if (y > 280) { 
       doc.addPage();
       y = 20;
     }
@@ -367,11 +417,16 @@ async function sharePDF() {
   // genera il blob PDF
   const blob = doc.output("blob");
 
+  // Costruisci una stringa di testo alternativa per la condivisione se il file non è supportato
+  const textContent = (pdfNote ? pdfNote + "\n\n" : "") + buildPDFContent().join("\n");
+
+
   // verifica supporto navigator.share con file
   if (navigator.canShare && navigator.canShare({ files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })] })) {
     try {
       await navigator.share({
         title: "Lista della Spesa",
+        text: textContent, // Aggiunto testo anche per la condivisione di file
         files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })]
       });
     } catch (err) {
@@ -381,7 +436,7 @@ async function sharePDF() {
   } else if (navigator.share) {
     // fallback: testo semplice se non supporta file
     try {
-      await navigator.share({ title: "Lista della Spesa", text: buildTextFromShopping() });
+      await navigator.share({ title: "Lista della Spesa", text: textContent });
     } catch (err) {
       alert("Condivisione non completata.");
     }
@@ -390,67 +445,64 @@ async function sharePDF() {
   }
 }
 
-/* -------------- UTILITY: persistenza locale (facoltativa) -------------- */
-// salva automaticamente in localStorage per mantenere la lista tra refresh
-function persistLocal() {
-  try { localStorage.setItem("shopping_local_v1", JSON.stringify(shopping)); } catch(e){}
-}
-function restoreLocal() {
-  try {
-    const s = localStorage.getItem("shopping_local_v1");
-    if (s) { shopping = JSON.parse(s); renderShopping(); }
-  } catch(e){}
-}
+
+/* -------------- INIZIALIZZAZIONE -------------- */
+
+// Esegui la persistenza locale all'avvio e all'uscita dalla pagina
 window.addEventListener("beforeunload", persistLocal);
-restoreLocal();
+restoreLocal(); 
 
-/* -------------- Aggiorna count quando shopping cambia -------------- */
-// usa un semplice observer via renderShopping che chiama updateCount => persist
-const origRender = renderShopping;
-renderShopping = function(){
-  shoppingItemsEl.innerHTML = "";
-  shopping.forEach((it, i) => {
-    const li = document.createElement("li");
-    li.innerHTML = `
-      <div class="left">
-        <input type="checkbox" ${it.done ? "checked" : ""} data-index="${i}" />
-        <div>
-          <div class="name">${it.nome}</div>
-          <div class="qty">Quantità: ${it.qty}</div>
-        </div>
-      </div>
-      <div class="right">
-        <button data-action="dec" data-index="${i}">-</button>
-        <button data-action="inc" data-index="${i}">+</button>
-        <button data-action="del" data-index="${i}">✖</button>
-      </div>
-    `;
-    li.querySelector('input[type="checkbox"]').addEventListener("change", e => {
-      const idx = +e.target.dataset.index;
-      shopping[idx].done = e.target.checked;
-      renderShopping();
-    });
-    li.querySelector('button[data-action="dec"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      if (shopping[idx].qty > 1) shopping[idx].qty--;
-      else shopping.splice(idx,1);
-      renderShopping();
-    });
-    li.querySelector('button[data-action="inc"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      shopping[idx].qty++;
-      renderShopping();
-    });
-    li.querySelector('button[data-action="del"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      shopping.splice(idx,1);
-      renderShopping();
-    });
-    shoppingItemsEl.appendChild(li);
-  });
-  updateCount();
-  persistLocal();
-};
+// Inizializza UI
+renderCatalog(catalogo);
+renderShopping(); // Chiama la versione sovrascritta che aggiorna count e persiste localmente
 
-/* inizializza render dopo override */
-renderShopping();
+/* -------------- EVENTI -------------- */
+searchInput.addEventListener("input", () => {
+  const q = searchInput.value.trim().toLowerCase();
+  const filtered = catalogo.filter(p =>
+    p.nome.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q)
+  );
+  renderCatalog(filtered);
+});
+
+addManualBtn.addEventListener("click", async () => {
+  const val = manualInput.value.trim();
+  if (!val) return;
+
+  // Normalizza il valore per il confronto
+  const normalizedVal = val.toLowerCase();
+
+  // Controlla se esiste già nel catalogo (ignorando maiuscole/minuscole)
+  if (!catalogo.some(p => p.nome.toLowerCase() === normalizedVal)) {
+    // Aggiungi automaticamente al catalogo con categoria "Altro"
+    catalogo.push({ categoria: "Altro", nome: val });
+
+    // Salva il catalogo aggiornato su Firestore
+    await saveCatalogFirestore();
+
+    // Aggiorna la UI del catalogo
+    renderCatalog(catalogo);
+  }
+
+  // Aggiungi alla lista della spesa
+  addItemToShopping(val);
+  manualInput.value = "";
+});
+
+saveBtn.addEventListener("click", saveList);
+loadBtn.addEventListener("click", loadLists);
+
+// Aggiorna la variabile pdfNote prima di scaricare o condividere
+downloadBtn.addEventListener("click", () => {
+  showPDFNoteInput(downloadStyledPDF);
+});
+
+shareBtn.addEventListener("click", () => {
+  showPDFNoteInput(sharePDF);
+});
+
+clearBtn.addEventListener("click", () => {
+  if (!confirm("Vuoi davvero svuotare la lista corrente?")) return;
+  shopping = [];
+  renderShopping();
+});

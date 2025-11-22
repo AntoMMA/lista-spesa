@@ -10,10 +10,18 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+// NUOVA INIZIALIZZAZIONE PER REALTIME DATABASE
+const dbRT = firebase.database(); 
+
+// ID UTENTE DI TEST: DA SOSTITUIRE CON UN VERO UTENTE AUTENTICATO
+const CURRENT_USER_ID = "USER_TEST_1234";
+// NOME E COGNOME DI TEST (per simulare i dati del DB)
+const CURRENT_USER_NAME = "Marco Rossi (TU)";
+
 
 async function saveCatalogFirestore() {
   try {
-    // Ordina il catalogo prima di salvarlo per mantenere l'ordine
+//... (resto della funzione saveCatalogFirestore)
     const sortedCatalogo = catalogo.sort((a, b) => a.nome.localeCompare(b.nome));
     await db.collection("catalogo").doc("prodotti").set({ items: sortedCatalogo });
     console.log("Catalogo aggiornato su Firestore");
@@ -23,45 +31,7 @@ async function saveCatalogFirestore() {
 }
 
 /* -------------- CATALOGO PREIMPOSTATO -------------- */
-const catalogo = [
-  { categoria: "Frutta", nome: "Mele" },
-  { categoria: "Frutta", nome: "Banane" },
-  { categoria: "Frutta", nome: "Arance" },
-  { categoria: "Frutta", nome: "Pere" },
-
-  { categoria: "Verdura", nome: "Pomodori" },
-  { categoria: "Verdura", nome: "Insalata" },
-  { categoria: "Verdura", nome: "Zucchine" },
-  { categoria: "Verdura", nome: "Patate" },
-
-  { categoria: "Carne", nome: "Petto di pollo" },
-  { categoria: "Carne", nome: "Pollo intero" },
-  { categoria: "Carne", nome: "Manzo macinato" },
-
-  { categoria: "Pesce", nome: "Salmone" },
-  { categoria: "Pesce", nome: "Filetti di merluzzo" },
-  { categoria: "Pesce", nome: "Tonno in scatola" },
-
-  { categoria: "Cibo confezionato", nome: "Pasta" },
-  { categoria: "Cibo confezionato", nome: "Riso" },
-  { categoria: "Cibo confezionato", nome: "Farina" },
-  { categoria: "Cibo confezionato", nome: "Biscotti" },
-
-  { categoria: "Bevande", nome: "Acqua naturale" },
-  { categoria: "Bevande", nome: "Acqua frizzante" },
-  { categoria: "Bevande", nome: "Coca Cola" },
-  { categoria: "Bevande", nome: "Succo d'arancia" },
-
-  { categoria: "Snack", nome: "Patatine" },
-  { categoria: "Snack", nome: "Noci" },
-
-  { categoria: "Pulizia", nome: "Detersivo piatti" },
-  { categoria: "Pulizia", nome: "Ammorbidente" },
-  { categoria: "Pulizia", nome: "Spugne" },
-
-  { categoria: "Casa", nome: "Carta igienica" },
-  { categoria: "Casa", nome: "Sacchi immondizia" }
-];
+//... (resto del catalogo)
 
 /* -------------- ELEMENTI DOM -------------- */
 const catalogList = document.getElementById("catalogList");
@@ -79,408 +49,162 @@ const savedListsEl = document.getElementById("savedLists");
 const pdfNoteContainer = document.getElementById("pdfNoteContainer");
 const pdfNoteInput = document.getElementById("pdfNoteInput");
 const pdfNoteConfirmBtn = document.getElementById("pdfNoteConfirmBtn");
+// NUOVO ELEMENTO DOM
+const activeUsersListEl = document.getElementById("activeUsersList");
+
 
 let pdfNote = ""; // variabile globale che terrà il testo da inserire nel PDF
 /* -------------- STATO -------------- */
 let shopping = []; // array di oggetti {nome, qty, done}
+// NUOVI STATI GLOBALI PER GLI UTENTI
+let usersCache = {}; // Mappa per nome/cognome da Firestore: {userID: {firstName, lastName}}
+let presenceCache = {}; // Mappa per lo stato online/offline
 
 function showPDFNoteInput(callback) {
-  pdfNoteContainer.style.display = "block";
-  pdfNoteInput.value = pdfNote; // mostra eventuale testo precedente
-  pdfNoteInput.focus();
-
-  const confirmHandler = () => {
-    pdfNote = pdfNoteInput.value.trim();
-    pdfNoteContainer.style.display = "none";
-    pdfNoteConfirmBtn.removeEventListener("click", confirmHandler);
-    callback();
-  };
-  
-  // Rimuovi eventuali listener precedenti e aggiungi il nuovo
-  pdfNoteConfirmBtn.onclick = null;
-  pdfNoteConfirmBtn.addEventListener("click", confirmHandler);
+//... (resto della funzione showPDFNoteInput)
 }
 
 /* -------------- UTILITY: persistenza locale -------------- */
-// salva automaticamente in localStorage per mantenere la lista tra refresh
-function persistLocal() {
-  try { localStorage.setItem("shopping_local_v1", JSON.stringify(shopping)); } catch(e){}
-}
-function restoreLocal() {
-  try {
-    const s = localStorage.getItem("shopping_local_v1");
-    if (s) { shopping = JSON.parse(s); }
-  } catch(e){}
-}
+//... (resto delle funzioni di persistenza locale)
 
 /* -------------- FUNZIONI UI -------------- */
 
 function renderShopping() {
-  shoppingItemsEl.innerHTML = "";
-  shopping.forEach((it, i) => {
-    const li = document.createElement("li");
-    li.classList.toggle("done", it.done); // AGGIUNGE/RIMUOVE la classe CSS .done
-    
-    li.innerHTML = `
-      <div class="left">
-        <input type="checkbox" ${it.done ? "checked" : ""} data-index="${i}" />
-        <div>
-          <div class="name">${it.nome}</div>
-          <div class="qty">Quantità: ${it.qty}</div>
-        </div>
-      </div>
-      <div class="right">
-        <button data-action="dec" data-index="${i}" class="button">-</button>
-        <button data-action="inc" data-index="${i}" class="button">+</button>
-        <button data-action="del" data-index="${i}" class="button danger">✖</button>
-      </div>
-    `;
-    
-    // Gestione eventi: l'indice viene gestito tramite data-attribute
-    li.querySelector('input[type="checkbox"]').addEventListener("change", e => {
-      const idx = +e.target.dataset.index;
-      shopping[idx].done = e.target.checked;
-      renderShopping(); // Ricarica la lista per applicare lo stile .done
-    });
-    li.querySelector('button[data-action="dec"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      if (shopping[idx].qty > 1) shopping[idx].qty--;
-      else shopping.splice(idx,1); // Rimuovi se qty è 1 e decresce
-      renderShopping();
-    });
-    li.querySelector('button[data-action="inc"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      shopping[idx].qty++;
-      renderShopping();
-    });
-    li.querySelector('button[data-action="del"]').addEventListener("click", e => {
-      const idx = +e.target.dataset.index;
-      shopping.splice(idx,1);
-      renderShopping();
-    });
-    
-    shoppingItemsEl.appendChild(li);
-  });
-  
+//... (resto della funzione renderShopping)
   updateCount();
   persistLocal(); // Salva dopo ogni modifica alla lista
 }
 
-
 function renderCatalog(items) {
-  // raggruppa per categoria
-  const groups = items.reduce((acc, cur) => {
-    (acc[cur.categoria] = acc[cur.categoria] || []).push(cur);
-    return acc;
-  }, {});
-  catalogList.innerHTML = "";
-  
-  // Ordina le categorie
-  const sortedCategories = Object.keys(groups).sort((a,b) => {
-    // Mette la categoria "Altro" alla fine
-    if (a === "Altro") return 1;
-    if (b === "Altro") return -1;
-    return a.localeCompare(b);
-  });
-  
-  for (const cat of sortedCategories) {
-    const section = document.createElement("div");
-    section.className = "cat-section";
-    section.innerHTML = `<div class="cat-title">${cat}</div>`;
-    
-    // Ordina i prodotti all'interno della categoria
-    groups[cat].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(prod => {
-      const el = document.createElement("div");
-      el.className = "prod";
-      // CORREZIONE: Aggiunto l'elemento .meta
-      el.innerHTML = `<div class="meta"><strong>${prod.nome}</strong><small>${prod.categoria}</small></div><div class="add">+</div>`;
-      el.addEventListener("click", () => addItemToShopping(prod.nome));
-      section.appendChild(el);
-    });
-    catalogList.appendChild(section);
-  }
+//... (resto della funzione renderCatalog)
 }
 
 function addItemToShopping(name) {
-  // se esiste incrementa qty
-  const idx = shopping.findIndex(s => s.nome.toLowerCase() === name.toLowerCase());
-  if (idx >= 0) {
-    shopping[idx].qty += 1;
-  } else {
-    // Aggiungi un nuovo articolo non spuntato
-    shopping.push({ nome: name, qty: 1, done: false });
-  }
-  renderShopping();
+//... (resto della funzione addItemToShopping)
 }
 
 function updateCount() {
-  const total = shopping.reduce((s, it) => s + it.qty, 0);
-  itemCountEl.textContent = total;
+//... (resto della funzione updateCount)
 }
+
+
+/* -------------- FUNZIONI UTENTI ATTIVI E PRESENZA -------------- */
+
+// Funzione per aggiornare la UI della lista utenti
+function renderUsers() {
+    activeUsersListEl.innerHTML = "";
+    
+    // Ordina gli utenti: online prima di offline
+    const sortedUserIDs = Object.keys(usersCache).sort((a, b) => {
+        const statusA = presenceCache[a]?.state === 'online' ? 0 : 1;
+        const statusB = presenceCache[b]?.state === 'online' ? 0 : 1;
+        
+        // Prima per stato (online/offline), poi per nome
+        if (statusA !== statusB) return statusA - statusB; 
+        
+        const nameA = `${usersCache[a].firstName} ${usersCache[a].lastName}`;
+        const nameB = `${usersCache[b].firstName} ${usersCache[b].lastName}`;
+        return nameA.localeCompare(nameB);
+    });
+    
+    sortedUserIDs.forEach(userID => {
+        const user = usersCache[userID];
+        const status = presenceCache[userID] || { state: 'offline' };
+        
+        const li = document.createElement("li");
+        
+        // Determina le classi CSS per il pallino
+        const dotClass = `status-${status.state}`;
+        const fullName = `${user.firstName} ${user.lastName}`;
+        
+        li.innerHTML = `
+            <span id="dot-${userID}" class="status-dot ${dotClass}"></span>
+            <span>${fullName}</span>
+        `;
+        
+        activeUsersListEl.appendChild(li);
+    });
+    
+    if (sortedUserIDs.length === 0) {
+        activeUsersListEl.innerHTML = "<li style='color: var(--muted-color);'>Nessun utente disponibile.</li>";
+    }
+}
+
+
+// 1. Logica di PRESENZA (onDisconnect) per l'utente corrente
+function setupPresence() {
+    // 1. Definisci il riferimento al nodo di presenza dell'utente corrente
+    const userRef = dbRT.ref('presence/' + CURRENT_USER_ID);
+
+    // 2. Imposta l'azione 'onDisconnect': se la connessione cade, setta lo stato a 'offline'
+    userRef.onDisconnect().set({
+        state: 'offline',
+        last_seen: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        // 3. Imposta immediatamente lo stato 'online'
+        userRef.set({
+            state: 'online',
+            last_seen: firebase.database.ServerValue.TIMESTAMP
+        });
+        console.log("Presenza online stabilita per:", CURRENT_USER_ID);
+    });
+
+    // 4. Se l'utente chiude volontariamente la finestra (opzionale ma consigliato)
+    window.addEventListener('beforeunload', () => {
+        userRef.set({ state: 'offline', last_seen: Date.now() });
+    });
+}
+
+
+// 2. Recupera i Nomi e Cognomi da Firestore e inizia l'ascolto
+async function loadAndWatchUsers() {
+    // Simulazione di utenti registrati in Firestore
+    // Nota: in un'app vera, useresti l'ID di autenticazione come ID del documento
+    const mockUsers = [
+        { id: CURRENT_USER_ID, firstName: CURRENT_USER_NAME, lastName: "" }, // L'utente corrente
+        { id: "user_5678", firstName: "Anna", lastName: "Verdi" },
+        { id: "user_9012", firstName: "Luca", lastName: "Bianchi" },
+    ];
+    
+    mockUsers.forEach(u => {
+        usersCache[u.id] = { firstName: u.firstName, lastName: u.lastName };
+    });
+    
+    // 3. Ascolta i cambiamenti di stato da Realtime Database
+    dbRT.ref('presence').on('value', (snapshot) => {
+        const newPresenceData = snapshot.val() || {};
+        
+        // Aggiorna la cache di presenza
+        presenceCache = newPresenceData;
+        
+        // Aggiorna la UI
+        renderUsers();
+    });
+    
+    // Qui puoi anche implementare il recupero vero da Firestore. Esempio concettuale:
+    /*
+    const snapshot = await db.collection("utenti_registrati").get();
+    snapshot.forEach(doc => {
+        usersCache[doc.id] = doc.data();
+    });
+    */
+    
+    renderUsers(); // Render iniziale
+}
+
 
 /* -------------- FIRESTORE: SALVA / CARICA / ELIMINA -------------- */
 async function saveList() {
-  if (shopping.length === 0) {
-    alert("La lista è vuota — aggiungi almeno un articolo.");
-    return;
-  }
-  try {
-    // Ordina la lista da salvare: prima non spuntati, poi spuntati
-    const listToSave = [...shopping].sort((a, b) => (a.done === b.done) ? 0 : a.done ? 1 : -1);
-    
-    const doc = await db.collection("liste_spesa").add({
-      items: listToSave,
-      // CORREZIONE: Usa il timestamp del server, non new Date()
-      createdAt: firebase.firestore.FieldValue.serverTimestamp() 
-    });
-    alert("Lista salvata su Firestore!");
-    loadLists(); // aggiorna elenco salvato
-  } catch (err) {
-    console.error(err);
-    alert("Errore nel salvataggio: " + (err.message || err));
-  }
+//... (resto della funzione saveList)
 }
 
 async function loadLists() {
-  try {
-    const snapshot = await db.collection("liste_spesa").orderBy("createdAt", "desc").limit(30).get();
-    savedListsEl.innerHTML = "";
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const id = doc.id;
-      const div = document.createElement("div");
-      div.className = "saved-item";
-      // Gestione sicura del campo data che può essere un oggetto Firebase Timestamp o un oggetto Data JS
-      const date = (data.createdAt && data.createdAt.toDate) ? data.createdAt.toDate() : new Date();
-      div.innerHTML = `
-        <div>
-          <div><strong>${date.toLocaleString()}</strong></div>
-          <div class="meta">${(data.items || []).length} articoli</div>
-        </div>
-        <div class="btns">
-          <button class="button" data-load="${id}">Carica</button>
-          <button class="button danger" data-delete="${id}">Elimina</button>
-        </div>
-      `;
-      div.querySelector('[data-load]').addEventListener("click", async () => {
-        shopping = (data.items || []).map(x => ({ ...x })); // clone profonda
-        renderShopping();
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      });
-      div.querySelector('[data-delete]').addEventListener("click", async () => {
-        if (!confirm("Eliminare questa lista definitivamente?")) return;
-        try {
-          await db.collection("liste_spesa").doc(id).delete();
-          div.remove();
-        } catch (err) {
-          alert("Errore eliminazione: " + (err.message || err));
-        }
-      });
-      savedListsEl.appendChild(div);
-    });
-    if (!savedListsEl.hasChildNodes()) savedListsEl.innerHTML = "<div style='color:var(--muted-color);padding:8px'>Nessuna lista salvata</div>";
-  } catch (err) {
-    console.error(err);
-    alert("Errore nel caricamento: " + (err.message || err));
-  }
+//... (resto della funzione loadLists)
 }
 
 
 /* -------------- PDF: FUNZIONI UTILITY -------------- */
-
-/**
- * Costruisce l'array di linee per il PDF, raggruppando gli articoli per categoria.
- * @returns {string[]} Un array di stringhe, dove ogni stringa è una riga del PDF.
- */
-function buildPDFContent() {
-  if (shopping.length === 0) return ["Lista vuota"];
-
-  // 1. Raggruppa per categoria
-  const grouped = shopping.reduce((acc, item) => {
-    const category = catalogo.find(c => c.nome.toLowerCase() === item.nome.toLowerCase())?.categoria || "Altro";
-    (acc[category] = acc[category] || []).push(item);
-    return acc;
-  }, {});
-
-  const lines = [];
-  
-  // 2. Ordina categorie (Altro per ultimo)
-  const sortedCategories = Object.keys(grouped).sort((a,b) => {
-    if (a === "Altro") return 1;
-    if (b === "Altro") return -1;
-    return a.localeCompare(b);
-  });
-
-  // 3. Formatta le linee
-  for (const cat of sortedCategories) {
-    lines.push(`-- ${cat.toUpperCase()} --`); // Inizio categoria
-    grouped[cat].forEach(item => {
-      const checkbox = item.done ? "[X]" : "[ ]";
-      lines.push(`${checkbox} ${item.nome} x${item.qty}`);
-    });
-    lines.push(""); // Spazio dopo ogni categoria
-  }
-  
-  return lines;
-}
-
-/* -------------- PDF: DOWNLOAD E SHARE (Con correzione Word-Wrap) -------------- */
-
-function downloadStyledPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = 30; // Coordinata Y iniziale per il contenuto (titolo è a y=12)
-
-  // sfondo pagina
-  doc.setFillColor(15, 23, 36);
-  doc.rect(0, 0, 210, 297, "F");
-
-  // titolo
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
-
-  // 1. GESTIONE DEL TESTO PERSONALIZZATO (PDF Note) con Word-Wrapping
-  if(pdfNote){
-    doc.setFontSize(14);
-    doc.setTextColor(255,200,50); // colore a contrasto
-    
-    // Usa splitTextToSize per dividere il testo sulla larghezza della pagina (max 182mm)
-    const splitText = doc.splitTextToSize(pdfNote, 182);
-    
-    for (let i = 0; i < splitText.length; i++) {
-        doc.text(splitText[i], 14, y);
-        y += 7; // Spazio verticale compatto per la nota
-    }
-    
-    y += 5; // Aggiunge spazio extra tra la nota e la lista
-  }
-    
-  // 2. GESTIONE DEL CONTENUTO DELLA LISTA
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255); // Reset colore testo per la lista
-  const lines = buildPDFContent();
-  lines.forEach(line => {
-    // Se è un titolo di categoria, usa un colore diverso
-    if (line.startsWith("--")) {
-        doc.setTextColor(0, 255, 255); // Ciano per le categorie
-        doc.text(line, 14, y);
-        doc.setTextColor(255, 255, 255); // Reset
-        y += 8;
-    } else {
-        // Usa splitTextToSize anche per gli articoli, in caso siano molto lunghi
-        const splitLine = doc.splitTextToSize(line, 182);
-        
-        splitLine.forEach(subLine => {
-            doc.text(subLine, 14, y);
-            y += 8;
-            if (y > 280) { doc.addPage(); y = 20; }
-        });
-    }
-    
-    // Se l'elemento non è una categoria e non è stato diviso (cioè splitLine.length è 1), y è stato incrementato una volta sola.
-    // Se è stato diviso, l'incremento di 8mm avviene all'interno del ciclo splitLine.
-    // L'incremento esterno non è più necessario qui, poiché è gestito dal loop interno.
-    if (!line.startsWith("--")) {
-        // Se la riga conteneva solo spazi (separatore tra categorie), ci sarà una riga vuota
-        // e lo spazio verrà aggiunto correttamente dal loop.
-    }
-    
-    if (y > 280) { doc.addPage(); y = 20; }
-  });
-
-  doc.save("lista_spesa.pdf");
-}
-
-async function sharePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = 30; // Coordinata Y iniziale per il contenuto
-
-  // sfondo pagina
-  doc.setFillColor(15, 23, 36);
-  doc.rect(0, 0, 210, 297, "F");
-
-  // titolo
-  doc.setFontSize(22);
-  doc.setTextColor(255, 255, 255);
-  doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
-
-  // 1. GESTIONE DEL TESTO PERSONALIZZATO (PDF Note) con Word-Wrapping
-  if(pdfNote){
-    doc.setFontSize(14);
-    doc.setTextColor(255,200,50); // colore a contrasto
-    const splitText = doc.splitTextToSize(pdfNote, 182); 
-    
-    for (let i = 0; i < splitText.length; i++) {
-        doc.text(splitText[i], 14, y);
-        y += 7; // Spazio verticale compatto per la nota
-    }
-    
-    y += 5; // Aggiunge spazio extra tra la nota e la lista
-  }
-
-  // 2. GESTIONE DEL CONTENUTO DELLA LISTA
-  doc.setFontSize(12);
-  doc.setTextColor(255, 255, 255); // Reset colore testo
-  const lines = buildPDFContent();
-  
-  lines.forEach(line => {
-    if (line.startsWith("--")) {
-        doc.setTextColor(0, 255, 255); 
-        doc.text(line, 14, y);
-        doc.setTextColor(255, 255, 255); 
-        y += 8;
-    } else {
-        const splitLine = doc.splitTextToSize(line, 182);
-        
-        splitLine.forEach(subLine => {
-            doc.text(subLine, 14, y);
-            y += 8;
-            if (y > 280) { 
-              doc.addPage();
-              y = 20;
-            }
-        });
-    }
-    
-    if (y > 280) { 
-      doc.addPage();
-      y = 20;
-    }
-  });
-
-  // genera il blob PDF
-  const blob = doc.output("blob");
-
-  // Costruisci una stringa di testo alternativa per la condivisione se il file non è supportato
-  const textContent = (pdfNote ? pdfNote + "\n\n" : "") + buildPDFContent().join("\n");
-
-
-  // verifica supporto navigator.share con file
-  if (navigator.canShare && navigator.canShare({ files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })] })) {
-    try {
-      await navigator.share({
-        title: "Lista della Spesa",
-        text: textContent, // Aggiunto testo anche per la condivisione di file
-        files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })]
-      });
-    } catch (err) {
-      console.warn("share error", err);
-      alert("Condivisione annullata o non possibile.");
-    }
-  } else if (navigator.share) {
-    // fallback: testo semplice se non supporta file
-    try {
-      await navigator.share({ title: "Lista della Spesa", text: textContent });
-    } catch (err) {
-      alert("Condivisione non completata.");
-    }
-  } else {
-    alert("La condivisione non è supportata sul tuo dispositivo.");
-  }
-}
-
+//... (resto delle funzioni PDF)
 
 /* -------------- INIZIALIZZAZIONE -------------- */
 
@@ -488,57 +212,13 @@ async function sharePDF() {
 window.addEventListener("beforeunload", persistLocal);
 restoreLocal(); 
 
+// INIZIALIZZAZIONE NUOVE FUNZIONALITÀ UTENTI
+loadAndWatchUsers(); // Carica nomi e inizia l'ascolto della presenza
+setupPresence(); // Imposta lo stato online/onDisconnect per l'utente corrente
+
 // Inizializza UI
 renderCatalog(catalogo);
 renderShopping();
 
 /* -------------- EVENTI -------------- */
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.trim().toLowerCase();
-  const filtered = catalogo.filter(p =>
-    p.nome.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q)
-  );
-  renderCatalog(filtered);
-});
-
-addManualBtn.addEventListener("click", async () => {
-  const val = manualInput.value.trim();
-  if (!val) return;
-
-  // Normalizza il valore per il confronto
-  const normalizedVal = val.toLowerCase();
-
-  // Controlla se esiste già nel catalogo (ignorando maiuscole/minuscole)
-  if (!catalogo.some(p => p.nome.toLowerCase() === normalizedVal)) {
-    // Aggiungi automaticamente al catalogo con categoria "Altro"
-    catalogo.push({ categoria: "Altro", nome: val });
-
-    // Salva il catalogo aggiornato su Firestore
-    await saveCatalogFirestore();
-
-    // Aggiorna la UI del catalogo
-    renderCatalog(catalogo);
-  }
-
-  // Aggiungi alla lista della spesa
-  addItemToShopping(val);
-  manualInput.value = "";
-});
-
-saveBtn.addEventListener("click", saveList);
-loadBtn.addEventListener("click", loadLists);
-
-// Aggiorna la variabile pdfNote prima di scaricare o condividere
-downloadBtn.addEventListener("click", () => {
-  showPDFNoteInput(downloadStyledPDF);
-});
-
-shareBtn.addEventListener("click", () => {
-  showPDFNoteInput(sharePDF);
-});
-
-clearBtn.addEventListener("click", () => {
-  if (!confirm("Vuoi davvero svuotare la lista corrente?")) return;
-  shopping = [];
-  renderShopping();
-});
+//... (resto della gestione eventi)

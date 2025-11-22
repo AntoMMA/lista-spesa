@@ -1,33 +1,65 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="UTF-8">
-<title>Lista della Spesa</title>
-<link rel="stylesheet" href="style.css">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Lista della Spesa — Modern</title>
+<link rel="stylesheet" href="style.css" />
 
-<!-- Firebase -->
+<!-- Firebase compat -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
-<!-- jsPDF per PDF -->
+<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
-
 <body>
+<main class="app rainbow-border">
+  <header class="app-header">
+    <h1>Lista della Spesa</h1>
+    <p class="subtitle">Tocca un prodotto per aggiungerlo. Cerca, salva, scarica o condividi.</p>
+  </header>
 
-<h1>Lista della Spesa</h1>
+  <section class="content">
+    <!-- CATALOGO + RICERCA -->
+    <aside class="catalog">
+      <div class="searchbox">
+        <input id="searchInput" type="search" placeholder="Cerca prodotto o categoria..." />
+      </div>
 
-<textarea id="shoppingList" placeholder="Scrivi qui la tua lista..."></textarea>
+      <div class="catalog-list" id="catalogList"></div>
 
-<div class="btns">
-    <button onclick="saveList()">💾 Salva su Firestore</button>
-    <button onclick="loadLists()">📂 Carica Liste</button>
-    <button onclick="downloadPDF()">📄 Scarica PDF</button>
-    <button onclick="sharePDF()">📨 Condividi PDF</button>
-</div>
+      <div class="add-manual">
+        <input id="manualInput" type="text" placeholder="Aggiungi articolo manuale..." />
+        <button id="addManualBtn">Aggiungi</button>
+      </div>
+    </aside>
 
-<h2>Liste Salvate</h2>
-<div id="savedLists"></div>
+    <!-- LISTA + AZIONI -->
+    <section class="list-area">
+      <div class="list-controls">
+        <div class="counts">
+          <span id="itemCount">0</span> articoli
+        </div>
+        <div class="actions">
+          <button id="loadBtn">📂 Carica Liste</button>
+          <button id="saveBtn">💾 Salva su Firestore</button>
+        </div>
+      </div>
+
+      <ul id="shoppingItems" class="shopping-list"></ul>
+
+      <div class="bottom-actions">
+        <button id="downloadBtn">📄 Scarica PDF</button>
+        <button id="shareBtn">📨 Condividi PDF</button>
+        <button id="clearBtn" class="danger">🧹 Pulisci</button>
+      </div>
+
+      <h2>Liste Salvate</h2>
+      <div id="savedLists" class="saved-lists"></div>
+    </section>
+  </section>
+</main>
 
 <script src="script.js"></script>
 </body>

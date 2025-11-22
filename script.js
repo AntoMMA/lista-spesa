@@ -74,9 +74,28 @@ const downloadBtn = document.getElementById("downloadBtn");
 const shareBtn = document.getElementById("shareBtn");
 const clearBtn = document.getElementById("clearBtn");
 const savedListsEl = document.getElementById("savedLists");
+const pdfNoteContainer = document.getElementById("pdfNoteContainer");
+const pdfNoteInput = document.getElementById("pdfNoteInput");
+const pdfNoteConfirmBtn = document.getElementById("pdfNoteConfirmBtn");
 
+let pdfNote = ""; // variabile globale che terrà il testo da inserire nel PDF
 /* -------------- STATO -------------- */
 let shopping = []; // array di oggetti {nome, qty, done}
+
+function showPDFNoteInput(callback) {
+  pdfNoteContainer.style.display = "block";
+  pdfNoteInput.value = pdfNote; // mostra eventuale testo precedente
+  pdfNoteInput.focus();
+
+  const confirmHandler = () => {
+    pdfNote = pdfNoteInput.value.trim();
+    pdfNoteContainer.style.display = "none";
+    pdfNoteConfirmBtn.removeEventListener("click", confirmHandler);
+    callback();
+  };
+
+  pdfNoteConfirmBtn.addEventListener("click", confirmHandler);
+}
 
 /* -------------- INIZIALIZZA UI -------------- */
 renderCatalog(catalogo);
@@ -115,8 +134,17 @@ addManualBtn.addEventListener("click", async () => {
 
 saveBtn.addEventListener("click", saveList);
 loadBtn.addEventListener("click", loadLists);
-downloadBtn.addEventListener("click", downloadPDF);
-shareBtn.addEventListener("click", sharePDF);
+downloadBtn.addEventListener("click", () => {
+  showPDFNoteInput(() => {
+    downloadStyledPDF();
+  });
+});
+
+shareBtn.addEventListener("click", () => {
+  showPDFNoteInput(() => {
+    sharePDF();
+  });
+});
 clearBtn.addEventListener("click", () => {
   if (!confirm("Vuoi davvero svuotare la lista corrente?")) return;
   shopping = [];
@@ -289,6 +317,14 @@ function downloadStyledPDF() {
   doc.setTextColor(255, 255, 255);
   doc.text("🛒 Lista della Spesa", 105, 20, { align: "center" });
 
+// aggiungi testo personalizzato in cima al PDF, se presente
+if(pdfNote){
+  doc.setFontSize(14);
+  doc.setTextColor(255,200,50); // colore a contrasto
+  doc.text(pdfNote, 14, y);
+  y += 12; // lascia un po' di spazio tra testo e lista
+}
+  
   // contenuto
   doc.setFontSize(12);
   const lines = buildPDFContent();

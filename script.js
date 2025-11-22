@@ -52,6 +52,50 @@ const catalogo = [
   { categoria: "Casa", nome: "Sacchi immondizia" }
 ];
 
+// ----------------------------
+// CARICA CATALOGO DA FIRESTORE
+// ----------------------------
+async function loadCatalog() {
+    const ref = doc(db, "data", "catalogo");
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+        catalogo = snap.data().prodotti;
+    } else {
+        await setDoc(ref, { prodotti: catalogo });
+    }
+    renderCatalog();
+}
+loadCatalog();
+
+
+// ----------------------------
+// SALVA CATALOGO IN FIRESTORE
+// ----------------------------
+async function saveCatalog() {
+    const ref = doc(db, "data", "catalogo");
+    await updateDoc(ref, { prodotti: catalogo });
+}
+
+
+// ----------------------------
+// MOSTRA CATALOGO
+// ----------------------------
+function renderCatalog(filter = "") {
+    const c = document.getElementById("catalog");
+    c.innerHTML = "";
+
+    catalogo
+        .filter(p => p.toLowerCase().includes(filter.toLowerCase()))
+        .forEach(item => {
+            const div = document.createElement("div");
+            div.textContent = item;
+            div.onclick = () => addToList(item);
+            c.appendChild(div);
+        });
+}
+
+
 /* -------------- ELEMENTI DOM -------------- */
 const catalogList = document.getElementById("catalogList");
 const searchInput = document.getElementById("searchInput");
@@ -247,57 +291,35 @@ async function loadLists() {
   }
 }
 
-/* -------------- PDF: DOWNLOAD E SHARE -------------- */
-function buildTextFromShopping() {
-  if (shopping.length === 0) return "Lista vuota";
-  return shopping.map(it => `- ${it.nome} x${it.qty}${it.done ? " (fatto)" : ""}`).join("\n");
-}
+// ----------------------------
+// GENERA PDF STILIZZATO
+// ----------------------------
+window.downloadPDF = function () {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF();
 
-function downloadPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const title = "Lista della Spesa";
-  doc.setFontSize(16);
-  doc.text(title, 14, 16);
-  doc.setFontSize(12);
-  const body = buildTextFromShopping();
-  const lines = doc.splitTextToSize(body, 180);
-  doc.text(lines, 14, 28);
-  doc.save("lista_spesa.pdf");
-}
+    pdf.setFontSize(22);
+    pdf.text("Lista della Spesa", 20, 20);
 
-async function sharePDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text("Lista della Spesa", 14, 16);
-  doc.setFontSize(12);
-  const body = buildTextFromShopping();
-  const lines = doc.splitTextToSize(body, 180);
-  doc.text(lines, 14, 28);
+    pdf.setFontSize(14);
+    let y = 35;
 
-  const blob = doc.output("blob");
-  if (navigator.canShare && navigator.canShare({ files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })] })) {
-    try {
-      await navigator.share({
-        title: "Lista della Spesa",
-        files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })]
-      });
-    } catch (err) {
-      console.warn("share error", err);
-      alert("Condivisione annullata o non possibile.");
-    }
-  } else if (navigator.share) {
-    // fallback: try with no files
-    try {
-      await navigator.share({ title: "Lista della Spesa", text: buildTextFromShopping() });
-    } catch (err) {
-      alert("Condivisione non completata.");
-    }
-  } else {
-    alert("La condivisione non è supportata sul tuo dispositivo.");
-  }
-}
+    lista.forEach(item => {
+        item = cleanProductName(item);
+        pdf.text("- " + item, 20, y);
+        y += 10;
+    });
+
+    pdf.save("lista_spesa.pdf");
+};
+
+
+// ----------------------------
+// SIMULAZIONE INVIO PDF
+// ----------------------------
+window.sendPDF = function () {
+    alert("Funzione di invio PDF: collegabile a WhatsApp o Email.");
+};
 
 /* -------------- UTILITY: persistenza locale (facoltativa) -------------- */
 // salva automaticamente in localStorage per mantenere la lista tra refresh
@@ -312,6 +334,43 @@ function restoreLocal() {
 }
 window.addEventListener("beforeunload", persistLocal);
 restoreLocal();
+
+
+// ----------------------------
+// AGGIUNGI ALLA LISTA
+// AUTO-APPRENDIMENTO ATTIVO
+// ----------------------------
+function cleanProductName(name) {
+    return name.replace(/\(.*?\)/g, "").trim();
+}
+
+window.addToList = async function (name) {
+    name = cleanProductName(name);
+
+    if (!catalogo.includes(name)) {
+        catalogo.push(name);
+        await saveCatalog();
+    }
+
+    lista.push(name);
+    renderList();
+};
+
+
+// ----------------------------
+// MOSTRA LA LISTA
+// ----------------------------
+function renderList() {
+    const ul = document.getElementById("shoppingList");
+    ul.innerHTML = "";
+
+    lista.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        ul.appendChild(li);
+    });
+}
+
 
 /* -------------- Aggiorna count quando shopping cambia -------------- */
 // usa un semplice observer via renderShopping che chiama updateCount => persist

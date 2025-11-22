@@ -13,15 +13,17 @@
 <!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
+
 <body>
 <main class="app rainbow-border">
+
   <header class="app-header">
-    <h1>Lista della Spesa</h1>
+    <h1>🛒 Lista della Spesa</h1>
     <p class="subtitle">Tocca un prodotto per aggiungerlo. Cerca, salva, scarica o condividi.</p>
   </header>
 
   <section class="content">
-    <!-- CATALOGO + RICERCA -->
+    <!-- Catalogo + ricerca -->
     <aside class="catalog">
       <div class="searchbox">
         <input id="searchInput" type="search" placeholder="Cerca prodotto o categoria..." />
@@ -35,7 +37,7 @@
       </div>
     </aside>
 
-    <!-- LISTA + AZIONI -->
+    <!-- Lista e azioni -->
     <section class="list-area">
       <div class="list-controls">
         <div class="counts">
@@ -58,9 +60,11 @@
       <h2>Liste Salvate</h2>
       <div id="savedLists" class="saved-lists"></div>
     </section>
+
   </section>
+
 </main>
 
-<script src="script.js"></script>
+<script type="module" src="script.js"></script>
 </body>
 </html>

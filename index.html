@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Lista della Spesa</title>
+<link rel="stylesheet" href="style.css">
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<!-- jsPDF per PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+
+<body>
+
+<h1>Lista della Spesa</h1>
+
+<textarea id="shoppingList" placeholder="Scrivi qui la tua lista..."></textarea>
+
+<div class="btns">
+    <button onclick="saveList()">💾 Salva su Firestore</button>
+    <button onclick="loadLists()">📂 Carica Liste</button>
+    <button onclick="downloadPDF()">📄 Scarica PDF</button>
+    <button onclick="sharePDF()">📨 Condividi PDF</button>
+</div>
+
+<h2>Liste Salvate</h2>
+<div id="savedLists"></div>
+
+<script src="script.js"></script>
+</body>
+</html>

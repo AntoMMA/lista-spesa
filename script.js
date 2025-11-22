@@ -11,6 +11,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
+async function saveCatalogFirestore() {
+  try {
+    await db.collection("catalogo").doc("prodotti").set({ items: catalogo });
+    console.log("Catalogo aggiornato su Firestore");
+  } catch (err) {
+    console.error("Errore salvataggio catalogo:", err);
+  }
+}
+
 /* -------------- CATALOGO PREIMPOSTATO -------------- */
 const catalogo = [
   { categoria: "Frutta", nome: "Mele" },
@@ -83,9 +92,23 @@ searchInput.addEventListener("input", () => {
   renderCatalog(filtered);
 });
 
-addManualBtn.addEventListener("click", () => {
+addManualBtn.addEventListener("click", async () => {
   const val = manualInput.value.trim();
   if (!val) return;
+
+  // Controlla se esiste già nel catalogo (ignorando maiuscole/minuscole)
+  if (!catalogo.some(p => p.nome.toLowerCase() === val.toLowerCase())) {
+    // Aggiungi automaticamente al catalogo con categoria "Altro"
+    catalogo.push({ categoria: "Altro", nome: val });
+
+    // Salva il catalogo aggiornato su Firestore
+    await saveCatalogFirestore();
+
+    // Aggiorna la UI del catalogo
+    renderCatalog(catalogo);
+  }
+
+  // Aggiungi alla lista della spesa
   addItemToShopping(val);
   manualInput.value = "";
 });
@@ -253,34 +276,66 @@ function buildTextFromShopping() {
   return shopping.map(it => `- ${it.nome} x${it.qty}${it.done ? " (Da prendere)" : ""}`).join("\n");
 }
 
-function downloadPDF() {
+function downloadStyledPDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const title = "Lista Spesa";
-  doc.setFontSize(16);
-  doc.text(title, 14, 16);
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  // sfondo pagina
+  doc.setFillColor(15, 23, 36);
+  doc.rect(0, 0, 210, 297, "F");
+
+  // titolo
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text("🛒 Lista della Spesa", 105, 20, { align: "center" });
+
+  // contenuto
   doc.setFontSize(12);
-  const body = buildTextFromShopping();
-  const lines = doc.splitTextToSize(body, 180);
-  doc.text(lines, 14, 28);
+  const lines = buildPDFContent();
+  let y = 30;
+  lines.forEach(line => {
+    doc.text(line, 14, y);
+    y += 8;
+    if (y > 280) { doc.addPage(); y = 20; }
+  });
+
   doc.save("lista_spesa.pdf");
 }
 
 async function sharePDF() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.setFontSize(16);
-  doc.text("Lista Spesa", 14, 16);
-  doc.setFontSize(12);
-  const body = buildTextFromShopping();
-  const lines = doc.splitTextToSize(body, 180);
-  doc.text(lines, 14, 28);
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
 
+  // sfondo pagina
+  doc.setFillColor(15, 23, 36); // colore sfondo simile al sito
+  doc.rect(0, 0, 210, 297, "F");
+
+  // titolo
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text("🛒 Lista della Spesa", 105, 20, { align: "center" });
+
+  // contenuto
+  doc.setFontSize(12);
+  const lines = buildPDFContent(); // funzione già definita per raggruppare per categoria e aggiungere checkbox
+  let y = 30;
+  lines.forEach(line => {
+    doc.text(line, 14, y);
+    y += 8;
+    if (y > 280) { // nuova pagina se necessario
+      doc.addPage();
+      y = 20;
+    }
+  });
+
+  // genera il blob PDF
   const blob = doc.output("blob");
+
+  // verifica supporto navigator.share con file
   if (navigator.canShare && navigator.canShare({ files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })] })) {
     try {
       await navigator.share({
-        title: "Lista Spesa",
+        title: "Lista della Spesa",
         files: [new File([blob], "lista_spesa.pdf", { type: "application/pdf" })]
       });
     } catch (err) {
@@ -288,7 +343,7 @@ async function sharePDF() {
       alert("Condivisione annullata o non possibile.");
     }
   } else if (navigator.share) {
-    // fallback: try with no files
+    // fallback: testo semplice se non supporta file
     try {
       await navigator.share({ title: "Lista della Spesa", text: buildTextFromShopping() });
     } catch (err) {

@@ -109,18 +109,17 @@ function persistLocal() {
 function restoreLocal() {
   try {
     const s = localStorage.getItem("shopping_local_v1");
-    if (s) { shopping = JSON.parse(s); } // non chiamare renderShopping qui, sarà chiamato dopo.
+    if (s) { shopping = JSON.parse(s); }
   } catch(e){}
 }
 
 /* -------------- FUNZIONI UI -------------- */
 
-// Sovrascritta per includere l'aggiornamento del count e la persistenza locale
-const originalRenderShopping = function() {
+function renderShopping() {
   shoppingItemsEl.innerHTML = "";
   shopping.forEach((it, i) => {
     const li = document.createElement("li");
-    li.classList.toggle("done", it.done); // Aggiunge/Rimuove la classe CSS .done
+    li.classList.toggle("done", it.done); // AGGIUNGE/RIMUOVE la classe CSS .done
     
     li.innerHTML = `
       <div class="left">
@@ -131,9 +130,9 @@ const originalRenderShopping = function() {
         </div>
       </div>
       <div class="right">
-        <button data-action="dec" data-index="${i}">-</button>
-        <button data-action="inc" data-index="${i}">+</button>
-        <button data-action="del" data-index="${i}">✖</button>
+        <button data-action="dec" data-index="${i}" class="button">-</button>
+        <button data-action="inc" data-index="${i}" class="button">+</button>
+        <button data-action="del" data-index="${i}" class="button danger">✖</button>
       </div>
     `;
     
@@ -165,11 +164,6 @@ const originalRenderShopping = function() {
   
   updateCount();
   persistLocal(); // Salva dopo ogni modifica alla lista
-};
-
-// Funzione globale che viene utilizzata
-function renderShopping() {
-    originalRenderShopping();
 }
 
 
@@ -198,7 +192,7 @@ function renderCatalog(items) {
     groups[cat].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(prod => {
       const el = document.createElement("div");
       el.className = "prod";
-      // CORREZIONE: Aggiunto l'elemento .meta come previsto dal CSS
+      // CORREZIONE: Aggiunto l'elemento .meta
       el.innerHTML = `<div class="meta"><strong>${prod.nome}</strong><small>${prod.categoria}</small></div><div class="add">+</div>`;
       el.addEventListener("click", () => addItemToShopping(prod.nome));
       section.appendChild(el);
@@ -236,7 +230,8 @@ async function saveList() {
     
     const doc = await db.collection("liste_spesa").add({
       items: listToSave,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp() // Usa il timestamp del server
+      // CORREZIONE: Usa il timestamp del server, non new Date()
+      createdAt: firebase.firestore.FieldValue.serverTimestamp() 
     });
     alert("Lista salvata su Firestore!");
     loadLists(); // aggiorna elenco salvato
@@ -329,12 +324,12 @@ function buildPDFContent() {
   return lines;
 }
 
-/* -------------- PDF: DOWNLOAD E SHARE -------------- */
+/* -------------- PDF: DOWNLOAD E SHARE (Con correzione Word-Wrap) -------------- */
 
 function downloadStyledPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  let y = 30; // Coordinata Y iniziale per il contenuto
+  let y = 30; // Coordinata Y iniziale per il contenuto (titolo è a y=12)
 
   // sfondo pagina
   doc.setFillColor(15, 23, 36);
@@ -345,15 +340,23 @@ function downloadStyledPDF() {
   doc.setTextColor(255, 255, 255);
   doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
 
-  // aggiungi testo personalizzato in cima al PDF, se presente
+  // 1. GESTIONE DEL TESTO PERSONALIZZATO (PDF Note) con Word-Wrapping
   if(pdfNote){
     doc.setFontSize(14);
     doc.setTextColor(255,200,50); // colore a contrasto
-    doc.text(pdfNote, 14, y);
-    y += 12; // lascia un po' di spazio tra testo e lista
+    
+    // Usa splitTextToSize per dividere il testo sulla larghezza della pagina (max 182mm)
+    const splitText = doc.splitTextToSize(pdfNote, 182);
+    
+    for (let i = 0; i < splitText.length; i++) {
+        doc.text(splitText[i], 14, y);
+        y += 7; // Spazio verticale compatto per la nota
+    }
+    
+    y += 5; // Aggiunge spazio extra tra la nota e la lista
   }
     
-  // contenuto
+  // 2. GESTIONE DEL CONTENUTO DELLA LISTA
   doc.setFontSize(12);
   doc.setTextColor(255, 255, 255); // Reset colore testo per la lista
   const lines = buildPDFContent();
@@ -363,10 +366,26 @@ function downloadStyledPDF() {
         doc.setTextColor(0, 255, 255); // Ciano per le categorie
         doc.text(line, 14, y);
         doc.setTextColor(255, 255, 255); // Reset
+        y += 8;
     } else {
-        doc.text(line, 14, y);
+        // Usa splitTextToSize anche per gli articoli, in caso siano molto lunghi
+        const splitLine = doc.splitTextToSize(line, 182);
+        
+        splitLine.forEach(subLine => {
+            doc.text(subLine, 14, y);
+            y += 8;
+            if (y > 280) { doc.addPage(); y = 20; }
+        });
     }
-    y += 8;
+    
+    // Se l'elemento non è una categoria e non è stato diviso (cioè splitLine.length è 1), y è stato incrementato una volta sola.
+    // Se è stato diviso, l'incremento di 8mm avviene all'interno del ciclo splitLine.
+    // L'incremento esterno non è più necessario qui, poiché è gestito dal loop interno.
+    if (!line.startsWith("--")) {
+        // Se la riga conteneva solo spazi (separatore tra categorie), ci sarà una riga vuota
+        // e lo spazio verrà aggiunto correttamente dal loop.
+    }
+    
     if (y > 280) { doc.addPage(); y = 20; }
   });
 
@@ -387,27 +406,44 @@ async function sharePDF() {
   doc.setTextColor(255, 255, 255);
   doc.text("🛒 Lista della Spesa", 105, 12, { align: "center" });
 
-  // aggiungi testo personalizzato in cima al PDF, se presente
+  // 1. GESTIONE DEL TESTO PERSONALIZZATO (PDF Note) con Word-Wrapping
   if(pdfNote){
     doc.setFontSize(14);
     doc.setTextColor(255,200,50); // colore a contrasto
-    doc.text(pdfNote, 14, y);
-    y += 12; // lascia un po' di spazio tra testo e lista
+    const splitText = doc.splitTextToSize(pdfNote, 182); 
+    
+    for (let i = 0; i < splitText.length; i++) {
+        doc.text(splitText[i], 14, y);
+        y += 7; // Spazio verticale compatto per la nota
+    }
+    
+    y += 5; // Aggiunge spazio extra tra la nota e la lista
   }
 
-  // contenuto
+  // 2. GESTIONE DEL CONTENUTO DELLA LISTA
   doc.setFontSize(12);
   doc.setTextColor(255, 255, 255); // Reset colore testo
   const lines = buildPDFContent();
+  
   lines.forEach(line => {
     if (line.startsWith("--")) {
         doc.setTextColor(0, 255, 255); 
         doc.text(line, 14, y);
         doc.setTextColor(255, 255, 255); 
+        y += 8;
     } else {
-        doc.text(line, 14, y);
+        const splitLine = doc.splitTextToSize(line, 182);
+        
+        splitLine.forEach(subLine => {
+            doc.text(subLine, 14, y);
+            y += 8;
+            if (y > 280) { 
+              doc.addPage();
+              y = 20;
+            }
+        });
     }
-    y += 8;
+    
     if (y > 280) { 
       doc.addPage();
       y = 20;
@@ -454,7 +490,7 @@ restoreLocal();
 
 // Inizializza UI
 renderCatalog(catalogo);
-renderShopping(); // Chiama la versione sovrascritta che aggiorna count e persiste localmente
+renderShopping();
 
 /* -------------- EVENTI -------------- */
 searchInput.addEventListener("input", () => {

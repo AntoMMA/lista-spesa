@@ -1,10 +1,11 @@
 /* ================== VARIABILI E ANIMAZIONE ================== */
 :root {
-  --bg-color: #0f1724; 
-  --text-color: #e6eef8; 
+  --bg-color: #0f1724; /* Sfondo scuro */
+  --text-color: #e6eef8; /* Testo chiaro */
   --muted-color: #888;
-  --primary-color: #0ea5e9; 
-  --danger-color: #ef4444; 
+  --primary-color: #0ea5e9; /* Sky blue */
+  --success-color: #22c55e; /* Green */
+  --danger-color: #ef4444; /* Red */
   
   /* Colori per l'animazione di bordo */
   --rgb1: 255,0,0;
@@ -20,7 +21,7 @@
   100% { border-color: rgb(var(--rgb1)); }
 }
 
-/* ================== STILE GENERALE E BASE ================== */
+/* ================== STILE GENERALE ================== */
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
@@ -30,10 +31,17 @@ body {
   min-height: 100vh;
 }
 
-h1, h2 { text-align: center; margin: 10px 0; }
-.subtitle { text-align: center; color: var(--muted-color); margin-bottom: 20px; }
+h1, h2 {
+  text-align: center;
+  margin: 10px 0;
+}
 
-/* Contenitore principale GRID */
+.subtitle {
+  text-align: center;
+  color: var(--muted-color);
+  margin-bottom: 20px;
+}
+
 .app {
   max-width: 1200px; 
   margin: 20px auto;
@@ -42,7 +50,6 @@ h1, h2 { text-align: center; margin: 10px 0; }
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   display: grid;
-  /* Default: 3 colonne per schermi grandi */
   grid-template-columns: 1fr 2fr 1fr; 
   gap: 20px;
 }
@@ -53,7 +60,7 @@ h1, h2 { text-align: center; margin: 10px 0; }
 }
 
 .app-header {
-  grid-column: 1 / 4; /* Si estende su tutte le colonne */
+  grid-column: 1 / 4; 
   border-bottom: 1px solid #334155;
   padding-bottom: 10px;
   margin-bottom: 15px;
@@ -79,13 +86,11 @@ h1, h2 { text-align: center; margin: 10px 0; }
     align-items: center;
     z-index: 1000;
 }
-.login-gate input, .login-gate button {
-    max-width: 300px; 
-    width: 90%;
+.login-gate h2 {
+    margin-bottom: 20px;
 }
 
-
-/* ================== COMPONENTI UI (Input/Button) ================== */
+/* ================== COMPONENTI UI ================== */
 input[type="text"], button {
     padding: 10px 15px;
     border-radius: 6px;
@@ -125,20 +130,18 @@ button.danger:hover {
     width: calc(100% - 30px); 
 }
 
-/* Stili specifici delle aree (Catalogo, Lista, Utenti) */
+/* ================== CATALOGO ================== */
 .catalog-area, .user-area, .list-area {
     padding: 10px;
     border-radius: 8px;
     background-color: #1e293b;
 }
-
 .catalog-area h3 {
     border-bottom: 1px solid #475569;
     padding-bottom: 5px;
     margin-top: 15px;
 }
 
-/* Catalogo */
 .catalog-grid {
     display: flex;
     flex-wrap: wrap;
@@ -191,7 +194,7 @@ button.danger:hover {
     margin-bottom: 0;
 }
 
-/* Lista Spesa */
+/* ================== LISTA SPESA ================== */
 .shopping-list {
   list-style: none;
   padding: 0;
@@ -372,56 +375,38 @@ ul#shoppingItems li .right {
     margin-left: 5px;
 }
 
-/* ================== MEDIA QUERY (Reattività) ================== */
-
-/* 1. LAYOUT TABLET (Tra 600px e 1000px) */
+/* ================== MEDIA QUERY (Responsiveness) ================== */
 @media (max-width: 1000px) {
     .app {
-        grid-template-columns: 1fr 1fr; /* 2 colonne */
+        grid-template-columns: 1fr 1fr; 
         max-width: 90%;
-        margin: 10px auto;
-        gap: 15px;
-    }
-    .app-header {
-        grid-column: 1 / 3; /* Header su 2 colonne */
     }
     .catalog-area {
-        grid-column: 1 / 2; /* Catalogo sulla colonna di sinistra */
+        grid-column: 1 / 2;
     }
     .list-area {
-        grid-column: 2 / 3; /* Lista sulla colonna di destra */
+        grid-column: 2 / 3;
     }
     .user-area {
-        grid-column: 1 / 3; /* Utenti in fondo, su riga intera */
+        grid-column: 1 / 3; 
     }
-    
-    /* Riduce un po' le dimensioni per schermi più piccoli */
-    .catalog-item {
-        width: 70px; 
-        height: 70px;
-        font-size: 0.75em;
+    .app-header {
+        grid-column: 1 / 3;
     }
 }
 
-/* 2. LAYOUT TELEFONO (Sotto i 600px) */
 @media (max-width: 600px) {
     .app {
-        grid-template-columns: 1fr; /* 1 colonna (Layout verticale) */
+        grid-template-columns: 1fr; 
         padding: 10px;
-        margin: 0;
-        min-height: 100vh;
-        border-radius: 0;
+        margin: 10px;
         gap: 10px;
     }
-    
-    /* Tutti gli elementi occupano l'intera larghezza */
-    .app-header, .catalog-area, .list-area, .user-area {
+    .catalog-area, .list-area, .user-area, .app-header {
         grid-column: 1 / 2;
     }
-
-    /* Controlli lista spesa */
     .list-controls {
-        flex-direction: column; /* Colonna per i controlli */
+        flex-direction: column;
         align-items: stretch;
     }
     .list-controls .actions {
@@ -429,14 +414,7 @@ ul#shoppingItems li .right {
         gap: 5px;
         margin-top: 10px;
     }
-    
-    /* Pulsanti PDF/Condividi/Pulisci */
     .bottom-actions {
         flex-direction: column;
-    }
-
-    /* Assicura che gli elementi della lista siano gestibili */
-    ul#shoppingItems li {
-        font-size: 0.9em;
     }
 }

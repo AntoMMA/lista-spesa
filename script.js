@@ -1,8 +1,8 @@
 /* =================================================================
-   FILE: script.js - Codice Completo e Funzionante con Catalogo esteso e ricerca
+   FILE: script.js - Codice Completo e Funzionante
    ================================================================= */
 
-/* -------------- FIREBASE CONFIG (LA TUA) -------------- */
+/* -------------- FIREBASE CONFIG (DEVI SOSTITUIRE!) -------------- */
 const firebaseConfig = {
   // SOSTITUISCI CON LA TUA CONFIGURAZIONE REALE!
   apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVdUIOb9J40", 
@@ -18,7 +18,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const dbRT = firebase.database(); 
 
-// Variabili globali per lo stato e i dati
+// Variabili globali
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
@@ -27,20 +27,16 @@ let shopping = [];
 let actionPending = '';
 
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
-let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; // AGGIUNTO searchInputEl
+let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
 
 /* -------------- CATALOGO PRODOTTI ESTESO -------------- */
 const catalogo = [
-    /* =========================================================
-       SEZIONE 1: FRUTTA E VERDURA 🍎🥦
-       ========================================================= */
     { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Mela" },
     { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Banana" },
     { categoria: "Frutta fresca", nome: "Arance", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Arancia" },
     { categoria: "Frutta fresca", nome: "Uva (bianca/nera)", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Uva" },
     { categoria: "Frutta secca", nome: "Noci (sacchetto)", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Noci" },
     { categoria: "Frutta secca", nome: "Mandorle", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Mand" },
-
     { categoria: "Verdura (Foglia)", nome: "Insalata iceberg", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Insala" },
     { categoria: "Verdura (Foglia)", nome: "Spinaci freschi", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Spinaci" },
     { categoria: "Verdura (Tubero/Radice)", nome: "Patate", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Patate" },
@@ -48,26 +44,16 @@ const catalogo = [
     { categoria: "Verdura (Frutto)", nome: "Zucchine", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Zucch" },
     { categoria: "Aromi/Erbe", nome: "Cipolle", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Cipolle" },
     { categoria: "Aromi/Erbe", nome: "Aglio", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Aglio" },
-
-    /* =========================================================
-       SEZIONE 2: CARNE, PESCE E SURGELATI 🥩🐟🧊
-       ========================================================= */
     { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Manzo" },
     { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Pollo" },
     { categoria: "Salumi/Affettati", nome: "Prosciutto cotto (vaschetta)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cotto" },
     { categoria: "Salumi/Affettati", nome: "Fesa di tacchino", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Tacch" },
-    
     { categoria: "Pesce fresco", nome: "Salmone (filetto)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Salmon" },
     { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Orata" },
     { categoria: "Pesce in scatola", nome: "Tonno sott'olio (scatola)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Tonno" },
-
     { categoria: "Surgelati (Verdura)", nome: "Piselli fini (sacchetto)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Piselli" },
     { categoria: "Surgelati (Pasti)", nome: "Pizza Margherita (surgelata)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Pizza" },
     { categoria: "Surgelati (Pasti)", nome: "Bastoncini di pesce", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Basto" },
-    
-    /* =========================================================
-       SEZIONE 3: LATTICINI E DISPENSA REFRIGERATA 🧀🥚
-       ========================================================= */
     { categoria: "Latte e derivati", nome: "Latte intero", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Latte" },
     { categoria: "Latte e derivati", nome: "Yogurt (bianco/frutta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Yogurt" },
     { categoria: "Formaggi freschi", nome: "Mozzarella (busta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Mozza" },
@@ -76,64 +62,36 @@ const catalogo = [
     { categoria: "Uova", nome: "Uova grandi (confezione da 6)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Uova" },
     { categoria: "Burro/Panna", nome: "Burro", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Burro" },
     { categoria: "Burro/Panna", nome: "Panna da cucina", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Panna" },
-
-    /* =========================================================
-       SEZIONE 4: PANE, PASTA E CEREALI 🍞🍝
-       ========================================================= */
     { categoria: "Pane/Panificati", nome: "Pane fresco (tipo casereccio)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pane" },
     { categoria: "Pane/Panificati", nome: "Fette biscottate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Fette" },
     { categoria: "Pasta secca", nome: "Spaghetti", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Spag" },
     { categoria: "Pasta secca", nome: "Penne Rigate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Penne" },
     { categoria: "Riso", nome: "Riso Arborio", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Riso" },
     { categoria: "Cereali colazione", nome: "Corn flakes", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Cereali" },
-    
-    /* =========================================================
-       SEZIONE 5: BEVANDE E ALCOLICI 💧🍷
-       ========================================================= */
     { categoria: "Acqua", nome: "Acqua naturale (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Acqua" },
     { categoria: "Succhi/Bibite", nome: "Succo d'arancia (cartone)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Succo" },
     { categoria: "Succhi/Bibite", nome: "Coca-Cola (lattine)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Coca" },
     { categoria: "Birra", nome: "Birra Lager (confezione)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Birra" },
     { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoR" },
-
-    /* =========================================================
-       SEZIONE 6: CONSERVE E SCATOLAME 🥫
-       ========================================================= */
     { categoria: "Legumi secchi/scatolame", nome: "Fagioli in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Fagioli" },
     { categoria: "Legumi secchi/scatolame", nome: "Ceci in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Ceci" },
     { categoria: "Pomodori/Salse", nome: "Passata di pomodoro", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Passat" },
     { categoria: "Sottaceti/Sottolio", nome: "Olive snocciolate", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Olive" },
-
-    /* =========================================================
-       SEZIONE 7: OLII, CONDIMENTI E SPEZIE 🧂
-       ========================================================= */
     { categoria: "Olii", nome: "Olio Extra Vergine di Oliva (1L)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=OEVO" },
     { categoria: "Condimenti", nome: "Sale fino", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Sale" },
     { categoria: "Condimenti", nome: "Zucchero semolato", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Zucch" },
     { categoria: "Salse", nome: "Maionese", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Maio" },
     { categoria: "Spezie", nome: "Origano", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Spezie" },
-
-    /* =========================================================
-       SEZIONE 8: DOLCI E SNACK 🍪🍫
-       ========================================================= */
     { categoria: "Biscotti/Merendine", nome: "Biscotti secchi", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Biscot" },
     { categoria: "Cioccolato", nome: "Tavoletta di cioccolato al latte", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Ciocc" },
     { categoria: "Snack salati", nome: "Patatine (sacchetto grande)", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Chips" },
     { categoria: "Confetture/Creme", nome: "Marmellata di fragole", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Marmel" },
-
-    /* =========================================================
-       SEZIONE 9: IGIENE PERSONALE E COSMETICI 🧴🛁
-       ========================================================= */
     { categoria: "Igiene orale", nome: "Dentifricio", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Denti" },
     { categoria: "Igiene orale", nome: "Spazzolino", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Spazz" },
     { categoria: "Corpo/Capelli", nome: "Shampoo", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Shamp" },
     { categoria: "Corpo/Capelli", nome: "Bagnoschiuma", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Bagno" },
     { categoria: "Carta/Fazzoletti", nome: "Carta igienica (rotoli)", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=CartaI" },
     { categoria: "Assorbenti/Protezioni", nome: "Assorbenti igienici", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Prot" },
-
-    /* =========================================================
-       SEZIONE 10: PULIZIA E CURA DELLA CASA 🧼🧹
-       ========================================================= */
     { categoria: "Lavanderia", nome: "Detersivo lavatrice (liquido)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Lavand" },
     { categoria: "Lavanderia", nome: "Ammorbidente", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Am morb" },
     { categoria: "Superfici/Pavimenti", nome: "Detersivo pavimenti", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Pavim" },
@@ -141,28 +99,12 @@ const catalogo = [
     { categoria: "Cucina", nome: "Detersivo piatti (a mano)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Piatti" },
     { categoria: "Accessori Pulizia", nome: "Spugne", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Spugne" },
     { categoria: "Rifiuti", nome: "Sacchetti per immondizia (grandi)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sacchet" },
-
-    /* =========================================================
-       SEZIONE 11: PET FOOD (Se applicabile) 🐕🐈
-       ========================================================= */
     { categoria: "Cibo per Animali", nome: "Crocchette per cane (sacchetto)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Dog" },
     { categoria: "Cibo per Animali", nome: "Bocconcini per gatto (lattine)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Cat" },
-
-    /* =========================================================
-       SEZIONE 12: ARTICOLI DI CARTOLERIA/UFFICIO 🖋️
-       ========================================================= */
     { categoria: "Cartoleria", nome: "Penna (blu/nera)", imgUrl: "https://placehold.co/50x50/F472B6/FFFFFF?text=Penna" },
     { categoria: "Cartoleria", nome: "Quaderno A4", imgUrl: "https://placehold.co/50x50/F472B6/FFFFFF?text=Quad" },
-
-    /* =========================================================
-       SEZIONE 13: FARMACIA/MEDICINALI (Da banco) 🩹
-       ========================================================= */
     { categoria: "Salute", nome: "Cerotti", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Cero" },
     { categoria: "Salute", nome: "Paracetamolo (Tachipirina/Efferalgan)", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Para" },
-
-    /* =========================================================
-       SEZIONE 14: VARIE E CUCINA 🍳
-       ========================================================= */
     { categoria: "Cucina/Usa e Getta", nome: "Pellicola trasparente", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pelli" },
     { categoria: "Cucina/Usa e Getta", nome: "Tovaglioli di carta", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Tova" },
     { categoria: "Varie", nome: "Pile stilo AA", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pile" }
@@ -184,11 +126,9 @@ function initializeApp() {
         mainAppEl.style.display = 'grid'; 
         loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
 
-        // Avvio dei listener Realtime
         listenToActiveUsers();
         listenToActiveList();
         
-        // Imposta l'utente come offline quando si disconnette
         dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
     } else {
         loginGateEl.style.display = 'flex'; 
@@ -196,7 +136,7 @@ function initializeApp() {
         if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
     }
 
-    renderCatalog(catalogo); // Inizializza il catalogo completo
+    renderCatalog(catalogo); 
     renderShopping();
     loadLists(); 
 }
@@ -227,7 +167,6 @@ async function handleLogin() {
             await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).set(CURRENT_USER_DATA);
         }
         
-        // Aggiungi/aggiorna lo stato di login (Realtime DB)
         dbRT.ref('active_users/' + CURRENT_USER_ID).set({
             firstName: firstName,
             lastName: lastName,
@@ -250,7 +189,6 @@ function handleLogout() {
     CURRENT_USER_DATA = { firstName: "", lastName: "" };
     localStorage.removeItem("user_unique_id");
     
-    // Aggiorna la vista
     loginGateEl.style.display = 'flex';
     mainAppEl.style.display = 'none';
     if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
@@ -263,7 +201,6 @@ function renderCatalog(itemsToRender) {
     let html = '';
     let currentCategory = '';
 
-    // Filtra e ordina gli elementi passati (quelli filtrati o l'intero catalogo)
     const sortedItems = [...itemsToRender].sort((a, b) => {
         if (a.categoria !== b.categoria) {
             return a.categoria.localeCompare(b.categoria);
@@ -288,8 +225,12 @@ function renderCatalog(itemsToRender) {
 function handleSearch() {
     const searchTerm = searchInputEl.value.toLowerCase().trim();
     
-    if (searchTerm.length < 2 && searchTerm !== "") return; // Non filtra per un solo carattere (eccetto stringa vuota)
-
+    if (searchTerm.length < 2 && searchTerm !== "") {
+        // Se la ricerca è breve, mostriamo solo l'intero catalogo.
+        renderCatalog(catalogo);
+        return;
+    }
+    
     const filteredCatalog = catalogo.filter(item => 
         item.nome.toLowerCase().includes(searchTerm) || 
         item.categoria.toLowerCase().includes(searchTerm)
@@ -297,7 +238,6 @@ function handleSearch() {
 
     renderCatalog(filteredCatalog);
 
-    // Scorri in cima alla lista dopo il filtro (migliore UX)
     catalogListEl.scrollTop = 0; 
 }
 
@@ -466,12 +406,10 @@ function downloadStyledPDF() {
     const doneItems = shopping.filter(i => i.done);
     const pendingItems = shopping.filter(i => !i.done);
     
-    // Intestazione
     doc.setFontSize(18);
     doc.text("Lista Spesa Condivisa", pageWidth / 2, y, { align: "center" });
     y += 8;
     
-    // Nota personalizzata
     if (pdfNote) {
         doc.setFontSize(10);
         doc.setTextColor(150, 150, 150); 
@@ -480,7 +418,6 @@ function downloadStyledPDF() {
         y += noteLines.length * 5 + 5;
     }
     
-    // Articoli da fare
     doc.setFontSize(14);
     doc.setTextColor(0, 0, 0); 
     doc.text("Articoli da Acquistare:", margin, y);
@@ -493,7 +430,6 @@ function downloadStyledPDF() {
         y += 7;
     });
     
-    // Articoli Fatti
     if (doneItems.length > 0) {
         y += 10;
         doc.setFontSize(14);
@@ -621,6 +557,7 @@ function listenToActiveList() {
 /* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA -------------- */
 
 function getDOMElements() {
+    // Funzione per ottenere tutti gli elementi DOM necessari
     loginGateEl = document.getElementById("loginGate");
     mainAppEl = document.getElementById("mainApp");
     loginButtonEl = document.getElementById("loginButton");
@@ -629,11 +566,9 @@ function getDOMElements() {
     loggedInUserEl = document.getElementById("loggedInUser");
     logoutButtonEl = document.getElementById("logoutButton");
     
-    // Elementi del Catalogo/Ricerca
     catalogListEl = document.getElementById("catalogList");
-    searchInputEl = document.getElementById("searchInput"); // AGGIUNTO
+    searchInputEl = document.getElementById("searchInput"); 
     
-    // Elementi della Lista Spesa
     shoppingItemsEl = document.getElementById("shoppingItems");
     itemCountEl = document.getElementById("itemCount");
     addManualInputEl = document.getElementById("manualInput"); 
@@ -643,7 +578,6 @@ function getDOMElements() {
     loadBtnEl = document.getElementById("loadBtn");
     savedListsEl = document.getElementById("savedLists");
     
-    // Elementi Utenti e PDF
     activeUsersListEl = document.getElementById("activeUsersList");
     pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
     pdfNoteInputEl = document.getElementById("pdfNoteInput");
@@ -651,12 +585,7 @@ function getDOMElements() {
     downloadBtnEl = document.getElementById("downloadBtn");
     shareBtnEl = document.getElementById("shareBtn");
     
-    if (!loginGateEl || !mainAppEl || !loggedInUserEl || !logoutButtonEl) {
-         console.error("ERRORE CRITICO: Elementi HTML essenziali non trovati. Assicurati che index.html sia completo.");
-         document.body.innerHTML = "<h1 style='color:red;'>Errore: Impossibile caricare l'interfaccia. Controlla index.html.</h1>";
-         return false;
-    }
-    return true;
+    return true; 
 }
 
 function addAllEventListeners() {
@@ -670,7 +599,7 @@ function addAllEventListeners() {
         }
     });
     
-    searchInputEl.addEventListener("input", handleSearch); // Ricerca in tempo reale
+    searchInputEl.addEventListener("input", handleSearch); 
     
     shoppingItemsEl.addEventListener("click", handleListClick);
     

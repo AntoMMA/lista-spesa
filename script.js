@@ -1,5 +1,5 @@
 /* =================================================================
-   FILE: script.js - Codice Aggiornato con Auto-Apprendimento e PDF Stilizzato
+   FILE: script.js - Codice Aggiornato con Soluzione Persistenza & Bug Offline
    ================================================================= */
 
 /* -------------- FIREBASE CONFIG (DEVI SOSTITUIRE!) -------------- */
@@ -19,10 +19,10 @@ const db = firebase.firestore();
 const dbRT = firebase.database(); 
 
 // Variabili globali
-let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
+// ð MODIFICATO: Inizializza l'ID per tentare il recupero dello stato salvato
+let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null; 
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
-// NUOVA COLLEZIONE per tracciare le aggiunte manuali
 const FREQUENT_PRODUCTS_COLLECTION = "prodotti_frequenti"; 
 
 let pdfNote = ""; 
@@ -33,6 +33,7 @@ let actionPending = '';
 let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
 
 /* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
+// ... (Catalogo invariato, omesso per brevità)
 const catalogo = [
     // --- FRUTTA E VERDURA (Integrate) ---
     { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Mela" },
@@ -110,9 +111,9 @@ const catalogo = [
     { categoria: "Succhi/Bibite", nome: "Succo d'arancia (cartone)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Succo" },
     { categoria: "Succhi/Bibite", nome: "Coca-Cola (lattine)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Coca" },
     { categoria: "Succhi/Bibite", nome: "The freddo (limone/pesca)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=The" },
-    { categoria: "Caffè/Tè", nome: "Caffè macinato (moka)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffèM" },
-    { categoria: "Caffè/Tè", nome: "Capsule/Cialde per caffè", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffèC" },
-    { categoria: "Caffè/Tè", nome: "Tè nero (bustine)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=Tè" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "CaffÃ¨ macinato (moka)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffÃ¨M" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "Capsule/Cialde per caffÃ¨", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffÃ¨C" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "TÃ¨ nero (bustine)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=TÃ¨" },
     { categoria: "Birra", nome: "Birra Lager (confezione)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Birra" },
     { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoR" },
     { categoria: "Vino", nome: "Vino bianco (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoB" },
@@ -188,6 +189,7 @@ const catalogo = [
     { categoria: "Varie", nome: "Lampadine (E27)", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Lamp" }
 ];
 
+
 /* -------------- FUNZIONI BASE (INVARIANTI) -------------- */
 
 function generateUUID() {
@@ -197,27 +199,31 @@ function generateUUID() {
     });
 }
 
-// MODIFICATA: Ora carica i prodotti frequenti prima di renderizzare
+/**
+ * Funzione di inizializzazione principale.
+ */
 async function initializeApp() {
     if (CURRENT_USER_ID) {
         loginGateEl.style.display = 'none';
         mainAppEl.style.display = 'grid'; 
         loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
 
+        // ð NUOVO: Imposta l'utente come ONLINE
+        setActiveUserStatus(true);
         listenToActiveUsers();
         listenToActiveList();
         
-        dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
+        // Rimosso dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove(); 
+        // per prevenire il bug offline al refresh/uscita accidentale.
         
-        // 🚀 NUOVO: Carica i prodotti frequenti e poi renderizza il catalogo
         const frequentProducts = await getFrequentProducts(); 
         renderCatalog(catalogo, frequentProducts); 
     } else {
+        // Se non c'è ID in localStorage, mostra la schermata di login
         loginGateEl.style.display = 'flex'; 
         mainAppEl.style.display = 'none';
         if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
         
-        // Renderizza il catalogo base anche se non loggato
         renderCatalog(catalogo);
     }
 
@@ -225,7 +231,31 @@ async function initializeApp() {
     loadLists(); 
 }
 
-/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Invariate) -------------- */
+/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Modificate per Persistenza/Stato) -------------- */
+
+/**
+ * Funzione per gestire lo stato di online/offline nel Realtime DB.
+ * @param {boolean} isOnline - true per online, false per offline.
+ */
+function setActiveUserStatus(isOnline) {
+    if (!CURRENT_USER_ID) return;
+    
+    // Usiamo un nodo specifico per lo stato
+    const userStatusRef = dbRT.ref('user_status/' + CURRENT_USER_ID);
+
+    if (isOnline) {
+        userStatusRef.set({
+            isOnline: true,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+        // Non usiamo onDisconnect().remove() qui, ma lo gestiamo noi alla chiusura/logout
+    } else {
+        userStatusRef.set({
+            isOnline: false,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+    }
+}
 
 async function handleLogin() {
     const firstName = inputFirstNameEl.value.trim();
@@ -243,14 +273,17 @@ async function handleLogin() {
         if (!snapshot.empty) {
             CURRENT_USER_ID = snapshot.docs[0].id;
             CURRENT_USER_DATA = { firstName, lastName };
-            localStorage.setItem("user_unique_id", CURRENT_USER_ID);
+            // Salva l'ID per la persistenza
+            localStorage.setItem("user_unique_id", CURRENT_USER_ID); 
         } else {
             CURRENT_USER_ID = generateUUID();
             CURRENT_USER_DATA = { firstName, lastName };
+            // Salva l'ID per la persistenza
             localStorage.setItem("user_unique_id", CURRENT_USER_ID);
             await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).set(CURRENT_USER_DATA);
         }
         
+        // Prima del log-in, assicurati che la lista di utenti attivi (per il nome) sia aggiornata
         dbRT.ref('active_users/' + CURRENT_USER_ID).set({
             firstName: firstName,
             lastName: lastName,
@@ -260,15 +293,15 @@ async function handleLogin() {
         initializeApp();
     } catch (error) {
          console.error("Errore durante il login/registrazione:", error);
-        alert("Errore di connessione o autenticazione. Riprova più tardi."); 
+        alert("Errore di connessione o autenticazione. Riprova piÃ¹ tardi."); 
     }
 }
 
 function handleLogout() {
-    if (CURRENT_USER_ID) {
-        dbRT.ref('active_users/' + CURRENT_USER_ID).remove();
-    }
-    
+    // Imposta l'utente offline
+    setActiveUserStatus(false);
+
+    // Pulisci i dati di sessione
     CURRENT_USER_ID = null;
     CURRENT_USER_DATA = { firstName: "", lastName: "" };
     localStorage.removeItem("user_unique_id");
@@ -278,9 +311,24 @@ function handleLogout() {
     if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
 }
 
+/**
+ * Gestisce l'evento di chiusura della pagina/tab.
+ * Imposta l'utente offline *solo* se la chiusura è intenzionale (o si simula che lo sia), 
+ * ma l'accesso è comunque salvato.
+ * Il browser cercherà di eseguire questa chiamata se l'utente chiude attivamente la pagina.
+ */
+function handleBeforeUnload(e) {
+    if (CURRENT_USER_ID) {
+        // Imposta immediatamente lo stato offline
+        setActiveUserStatus(false);
+        // dbRT.ref('active_users/' + CURRENT_USER_ID).remove(); // Rimosso per non distruggere l'active_users
+    }
+    // Non restituire nulla, o restituire un messaggio per un prompt standard (non raccomandato oggi)
+}
+
 
 /* -------------- FUNZIONI DI AUTO-APPRENDIMENTO (INVARIANTI) -------------- */
-
+// ... (saveManualAddition e getFrequentProducts invariate, omesse per brevità)
 /**
  * Salva o aggiorna il conteggio di un prodotto aggiunto manualmente.
  * @param {string} name - Nome del prodotto.
@@ -305,7 +353,7 @@ async function saveManualAddition(name) {
                     lastUsed: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } else {
-                // Se è la prima volta che viene aggiunto, crea il documento
+                // Se Ã¨ la prima volta che viene aggiunto, crea il documento
                 transaction.set(docRef, {
                     name: name,
                     count: 1,
@@ -320,7 +368,7 @@ async function saveManualAddition(name) {
 }
 
 /**
- * Recupera i prodotti più frequenti dal database.
+ * Recupera i prodotti piÃ¹ frequenti dal database.
  * @returns {Array<Object>} Lista di prodotti usati frequentemente.
  */
 async function getFrequentProducts() {
@@ -339,8 +387,9 @@ async function getFrequentProducts() {
     }
 }
 
-/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA INVARIANTI) -------------- */
 
+/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA INVARIANTI) -------------- */
+// ... (renderCatalog, handleSearch, renderShopping, syncShoppingList, addItem, handleListClick invariate, omesse per brevità)
 /**
  * Renderizza il catalogo con l'opzione dei prodotti frequenti in cima.
  * @param {Array<Object>} itemsToRender - Prodotti standard del catalogo da renderizzare.
@@ -352,7 +401,7 @@ function renderCatalog(itemsToRender, frequentProducts = []) {
 
     // 1. Aggiungi la sezione "Frequenti" solo se ci sono prodotti
     if (frequentProducts.length > 0) {
-        html += `<h3 class="catalog-category">⭐ FREQUENTEMENTE USATI</h3>`;
+        html += `<h3 class="catalog-category">â­ FREQUENTEMENTE USATI</h3>`;
         
         frequentProducts.forEach(item => {
              html += `<div class="catalog-item frequent-item" data-name="${item.name}" data-img-url="${item.imgUrl}">
@@ -392,7 +441,7 @@ async function handleSearch() {
     const frequentProducts = await getFrequentProducts(); // Carica i prodotti frequenti
 
     if (searchTerm.length < 2 && searchTerm !== "") {
-        // Se la ricerca è breve, mostra il catalogo intero con i frequenti in cima
+        // Se la ricerca Ã¨ breve, mostra il catalogo intero con i frequenti in cima
         renderCatalog(catalogo, frequentProducts);
         return;
     }
@@ -435,7 +484,7 @@ function renderShopping() {
                     <div class="right">
                         <button class="qty-btn" data-action="decrease">-</button>
                         <button class="qty-btn" data-action="increase">+</button>
-                        <button class="delete-btn" data-action="delete">🗑️</button>
+                        <button class="delete-btn" data-action="delete">ðï¸</button>
                     </div>
                 </li>`;
     }).join('');
@@ -468,7 +517,7 @@ function addItem(name, imgUrl, isManual = false) {
         });
     }
     
-    // 🚀 NUOVO: Chiama la funzione di auto-apprendimento se è un'aggiunta manuale
+    // ð NUOVO: Chiama la funzione di auto-apprendimento se Ã¨ un'aggiunta manuale
     if (isManual) {
         saveManualAddition(name);
     }
@@ -507,7 +556,7 @@ function handleListClick(e) {
 }
 
 /* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE (Invariate) -------------- */
-
+// ... (saveList, loadLists, generateStyledListHTML, downloadStyledPDF, sharePDF invariate, omesse per brevità)
 async function saveList() {
     if (shopping.length === 0 || !CURRENT_USER_ID) {
         alert("Lista vuota o non sei loggato.");
@@ -571,7 +620,7 @@ async function loadLists() {
 
 /**
  * Genera l'HTML stilizzato (mockup) della lista spesa per la conversione PDF.
- * Questo è il cuore dello stile Dark Mode.
+ * Questo Ã¨ il cuore dello stile Dark Mode.
  * @param {Array<Object>} list - La lista della spesa corrente.
  * @param {string} note - La nota utente da includere.
  * @returns {string} L'HTML completo e stilizzato.
@@ -614,7 +663,7 @@ function generateStyledListHTML(list, note) {
                     text-align: center;
                     line-height: 18px;
                     font-size: 9px;
-                ">${item.done ? '✓' : ''}</div>
+                ">${item.done ? 'â' : ''}</div>
                 <div style="
                     width: 35px; 
                     height: 35px; 
@@ -677,7 +726,7 @@ function downloadStyledPDF() {
         
         let heightLeft = imgHeight; // Altezza totale da stampare
         
-        // Crea il documento PDF. L'altezza iniziale è l'altezza standard A4 o l'altezza del contenuto (la maggiore)
+        // Crea il documento PDF. L'altezza iniziale Ã¨ l'altezza standard A4 o l'altezza del contenuto (la maggiore)
         const doc = new jsPDF('p', 'mm', [pdfWidth, Math.max(pdfHeight, imgHeight + (2 * margin))]); 
         
         let position = 0;
@@ -723,11 +772,11 @@ function sharePDF() {
         navigator.share(shareData)
             .catch((error) => {
                 console.error('Errore durante la condivisione web:', error);
-                alert("Condivisione fallita. Verrà scaricato il PDF stilizzato.");
+                alert("Condivisione fallita. VerrÃ  scaricato il PDF stilizzato.");
                 downloadStyledPDF(); // Ricade nel download stilizzato
             });
     } else {
-        alert("Il tuo browser non supporta l'API di condivisione nativa. Verrà scaricato il PDF stilizzato.");
+        alert("Il tuo browser non supporta l'API di condivisione nativa. VerrÃ  scaricato il PDF stilizzato.");
         downloadStyledPDF(); // Ricade nel download stilizzato
     }
     
@@ -738,7 +787,7 @@ function sharePDF() {
 }
 
 
-/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA - Invariate) -------------- */
+/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA - MODIFICATE) -------------- */
 
 async function fetchAllRegisteredUsers() {
     try {
@@ -754,22 +803,28 @@ async function fetchAllRegisteredUsers() {
     }
 }
 
+/**
+ * Ascolta i cambiamenti di stato (online/offline) degli utenti.
+ * ð MODIFICATO: Ora combina i dati di tutti gli utenti registrati con il loro stato in 'user_status'.
+ */
 async function listenToActiveUsers() {
     if (!CURRENT_USER_ID) return; 
 
     const allUsers = await fetchAllRegisteredUsers();
     
-    dbRT.ref('active_users/').on('value', (snapshot) => {
-        const activeUsers = snapshot.val() || {};
+    // Ascolta i cambiamenti di stato
+    dbRT.ref('user_status/').on('value', (snapshot) => {
+        const userStatus = snapshot.val() || {}; // Mappa di {userId: {isOnline: true/false, ...}}
         
         const finalUsersList = Object.values(allUsers).map(user => {
-            const isActive = activeUsers.hasOwnProperty(user.id); 
+            const statusData = userStatus[user.id] || { isOnline: false }; 
             
             return {
                 ...user,
-                isOnline: isActive
+                isOnline: statusData.isOnline || false // Stato di default offline
             };
         }).sort((a, b) => {
+            // Metti gli utenti online in cima
             if (a.isOnline === b.isOnline) {
                 return a.firstName.localeCompare(b.firstName);
             }
@@ -794,7 +849,7 @@ async function listenToActiveUsers() {
         
     }, (error) => {
         console.error("Errore Realtime DB (utenti):", error);
-        activeUsersListEl.innerHTML = `<li class="error-msg">❌ Errore di connessione: ${error.code}</li>`;
+        activeUsersListEl.innerHTML = `<li class="error-msg">â Errore di connessione: ${error.code}</li>`;
     });
 }
 
@@ -811,7 +866,7 @@ function listenToActiveList() {
 }
 
 
-/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA (INVARIANTI) -------------- */
+/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA (Modificate per Persistenza) -------------- */
 
 function getDOMElements() {
     // Funzione per ottenere tutti gli elementi DOM necessari
@@ -866,7 +921,7 @@ function addAllEventListeners() {
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
-            // 🚀 NUOVO: Passiamo true per indicare che è un'aggiunta manuale
+            // ð NUOVO: Passiamo true per indicare che Ã¨ un'aggiunta manuale
             addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale', true); 
             addManualInputEl.value = "";
         }
@@ -910,7 +965,7 @@ function addAllEventListeners() {
         if (!action || !id) return;
     
         if (action === "load") {
-            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
+            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrÃ  sovrascritta. Continuare?")) return;
             try {
                 const doc = await db.collection("liste_salvate").doc(id).get();
                 if (doc.exists) {
@@ -935,6 +990,9 @@ function addAllEventListeners() {
         if (e.key === 'Enter') handleLogin();
     });
     logoutButtonEl.addEventListener("click", handleLogout);
+
+    // ð NUOVO: Listener per la chiusura della pagina
+    window.addEventListener('beforeunload', handleBeforeUnload);
 }
 
 
@@ -944,13 +1002,16 @@ async function checkLoginStatus() {
             const doc = await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).get();
             if (doc.exists) {
                 CURRENT_USER_DATA = doc.data();
+                // Persistenza riuscita, passa all'app principale
                 initializeApp();
             } else {
+                // ID in localStorage ma utente non esiste più (caso raro), forziamo il logout
                 handleLogout(); 
             }
         } catch (err) {
             console.error("Errore nel recupero dati utente:", err);
-            handleLogout(); 
+            // In caso di errore di connessione, l'ID resta in memoria e si tenta il ri-login al prossimo avvio
+            initializeApp(); 
         }
     } else {
         initializeApp();
@@ -961,5 +1022,5 @@ async function checkLoginStatus() {
 document.addEventListener('DOMContentLoaded', () => {
     if (!getDOMElements()) return; 
     addAllEventListeners();
-    checkLoginStatus(); 
+    checkLoginStatus(); // Inizia controllando lo stato di login salvato
 });

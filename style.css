@@ -63,7 +63,7 @@ h1, h2 {
   }
 
   .catalog {
-    flex: 1; /* Il catalogo occupa 1 parte */
+    flex: 1.2; /* Il catalogo occupa un po' di più per le immagini */
     min-width: 300px;
   }
 
@@ -71,14 +71,13 @@ h1, h2 {
     flex: 2; /* La lista occupa 2 parti */
   }
 
-  /* NUOVO: La user-area prende meno spazio su desktop */
   .user-area {
-    flex: 0.5;
+    flex: 0.8;
     min-width: 200px;
   }
 }
 
-/* ================== NUOVO: SCHERMATA DI ACCESSO ================== */
+/* ================== SCHERMATA DI ACCESSO ================== */
 .login-gate {
   max-width: 400px;
   margin: 50px auto;
@@ -122,7 +121,7 @@ h1, h2 {
 }
 
 
-/* ================== NUOVO: UTENTI ATTIVI ================== */
+/* ================== UTENTI ATTIVI ================== */
 .user-area {
   border: 2px solid rgb(var(--rgb1));
   animation: rgb-border 4s linear infinite;
@@ -153,14 +152,12 @@ ul#activeUsersList li:last-child {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  /* Inizialmente grigio se lo stato non è ancora noto */
   background-color: var(--muted-color); 
 }
 
-/* Classi per lo stato */
 .status-online {
   background-color: var(--online-color);
-  box-shadow: 0 0 5px var(--online-color); /* Piccolo effetto glow */
+  box-shadow: 0 0 5px var(--online-color);
 }
 
 .status-offline {
@@ -169,7 +166,6 @@ ul#activeUsersList li:last-child {
 
 
 /* ================== ELEMENTI RIUTILIZZABILI ================== */
-/* ... (Il resto del CSS originale segue qui) ... */
 
 /* Campi di input */
 .searchbox input,
@@ -195,7 +191,7 @@ ul#activeUsersList li:last-child {
   cursor: pointer;
   font-weight: bold;
   transition: background-color 0.2s;
-  flex-shrink: 0; /* Impedisce al bottone di restringersi */
+  flex-shrink: 0;
 }
 
 .button:hover, .list-controls button:hover {
@@ -220,18 +216,47 @@ ul#activeUsersList li:last-child {
   padding: 10px 0;
 }
 
+/* Nuovo stile per il singolo item del catalogo */
 .catalog-item {
   background-color: #475569;
   color: var(--text-color);
-  padding: 8px 12px;
+  padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.1s;
+  display: flex; /* Importante per allineare immagine e testo */
+  align-items: center;
+  gap: 10px;
+  flex-basis: calc(50% - 4px); /* Su mobile 2 colonne */
+  box-sizing: border-box;
 }
 
 .catalog-item:hover {
   background-color: #334155;
 }
+
+/* Stile per l'immagine del catalogo */
+.product-photo-catalog {
+  width: 40px; 
+  height: 40px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.catalog-item .meta {
+  flex-grow: 1;
+}
+.catalog-item .meta strong {
+    display: block;
+    line-height: 1.2;
+}
+.catalog-item .meta small {
+    display: block;
+    color: var(--muted-color);
+    font-size: 0.8em;
+}
+
 
 .catalog-category {
   width: 100%;
@@ -248,6 +273,17 @@ ul#activeUsersList li:last-child {
 
 .add-manual button {
   flex-shrink: 0;
+}
+
+@media (min-width: 768px) {
+  .catalog-item {
+    flex-basis: calc(33.333% - 6px); /* 3 colonne su tablet/desktop medio */
+  }
+}
+@media (min-width: 1200px) {
+  .catalog-item {
+    flex-basis: calc(50% - 4px); /* 2 colonne se il catalogo è largo */
+  }
 }
 
 /* ================== LISTA SPESA ================== */
@@ -301,6 +337,15 @@ ul#shoppingItems li .left {
 ul#shoppingItems li .left input[type="checkbox"] {
   transform: scale(1.5); /* Ingrandisce la checkbox */
   cursor: pointer;
+}
+
+/* Stile per l'immagine nella lista spesa */
+.product-photo-list {
+  width: 40px;
+  height: 40px;
+  border-radius: 4px; /* Immagini quadrate nella lista */
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 ul#shoppingItems li .name {

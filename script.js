@@ -1,5 +1,5 @@
 /* =================================================================
-   FILE: script.js - Codice Completo e Funzionante
+   FILE: script.js - Codice Aggiornato con Auto-Apprendimento
    ================================================================= */
 
 /* -------------- FIREBASE CONFIG (DEVI SOSTITUIRE!) -------------- */
@@ -22,6 +22,9 @@ const dbRT = firebase.database();
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
+// NUOVA COLLEZIONE per tracciare le aggiunte manuali
+const FREQUENT_PRODUCTS_COLLECTION = "prodotti_frequenti"; 
+
 let pdfNote = ""; 
 let shopping = []; 
 let actionPending = '';
@@ -120,7 +123,8 @@ function generateUUID() {
     });
 }
 
-function initializeApp() {
+// MODIFICATA: Ora carica i prodotti frequenti prima di renderizzare
+async function initializeApp() {
     if (CURRENT_USER_ID) {
         loginGateEl.style.display = 'none';
         mainAppEl.style.display = 'grid'; 
@@ -130,18 +134,24 @@ function initializeApp() {
         listenToActiveList();
         
         dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
+        
+        // 🚀 NUOVO: Carica i prodotti frequenti e poi renderizza il catalogo
+        const frequentProducts = await getFrequentProducts(); 
+        renderCatalog(catalogo, frequentProducts); 
     } else {
         loginGateEl.style.display = 'flex'; 
         mainAppEl.style.display = 'none';
         if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
+        
+        // Renderizza il catalogo base anche se non loggato
+        renderCatalog(catalogo);
     }
 
-    renderCatalog(catalogo); 
     renderShopping();
     loadLists(); 
 }
 
-/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE -------------- */
+/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Invariate) -------------- */
 
 async function handleLogin() {
     const firstName = inputFirstNameEl.value.trim();
@@ -195,18 +205,98 @@ function handleLogout() {
 }
 
 
-/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA) -------------- */
+/* -------------- FUNZIONI DI AUTO-APPRENDIMENTO (NUOVE) -------------- */
 
-function renderCatalog(itemsToRender) {
+/**
+ * Salva o aggiorna il conteggio di un prodotto aggiunto manualmente.
+ * @param {string} name - Nome del prodotto.
+ */
+async function saveManualAddition(name) {
+    if (!CURRENT_USER_ID) return;
+
+    // Crea un ID di documento normalizzato dal nome del prodotto
+    const docId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    try {
+        const docRef = db.collection(FREQUENT_PRODUCTS_COLLECTION).doc(docId);
+        
+        await db.runTransaction(async (transaction) => {
+            const doc = await transaction.get(docRef);
+
+            if (doc.exists) {
+                // Se il prodotto esiste, incrementa il conteggio (contatore condiviso)
+                const newCount = (doc.data().count || 0) + 1;
+                transaction.update(docRef, { 
+                    count: newCount, 
+                    lastUsed: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } else {
+                // Se è la prima volta che viene aggiunto, crea il documento
+                transaction.set(docRef, {
+                    name: name,
+                    count: 1,
+                    imgUrl: 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale',
+                    lastUsed: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
+        });
+    } catch (e) {
+        console.error("Errore nel salvataggio dell'aggiunta manuale: ", e);
+    }
+}
+
+/**
+ * Recupera i prodotti più frequenti dal database.
+ * @returns {Array<Object>} Lista di prodotti usati frequentemente.
+ */
+async function getFrequentProducts() {
+    try {
+        const snapshot = await db.collection(FREQUENT_PRODUCTS_COLLECTION)
+            .where('count', '>', 0)
+            .orderBy('count', 'desc') 
+            .orderBy('lastUsed', 'desc') 
+            .limit(10)
+            .get();
+
+        return snapshot.docs.map(doc => doc.data());
+    } catch (error) {
+        console.error("Errore nel recupero dei prodotti frequenti:", error);
+        return [];
+    }
+}
+
+/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA MODIFICATE) -------------- */
+
+/**
+ * Renderizza il catalogo con l'opzione dei prodotti frequenti in cima.
+ * @param {Array<Object>} itemsToRender - Prodotti standard del catalogo da renderizzare.
+ * @param {Array<Object>} frequentProducts - Prodotti da mostrare nella sezione 'Frequenti'.
+ */
+function renderCatalog(itemsToRender, frequentProducts = []) {
     let html = '';
     let currentCategory = '';
 
+    // 1. Aggiungi la sezione "Frequenti" solo se ci sono prodotti
+    if (frequentProducts.length > 0) {
+        html += `<h3 class="catalog-category">⭐ FREQUENTEMENTE USATI</h3>`;
+        
+        frequentProducts.forEach(item => {
+             html += `<div class="catalog-item frequent-item" data-name="${item.name}" data-img-url="${item.imgUrl}">
+                        <img src="${item.imgUrl}" alt="${item.name}" class="product-photo">
+                        <span>${item.name} <small>(${item.count}x)</small></span>
+                    </div>`;
+        });
+    }
+
+    // 2. Aggiungi la sezione "Catalogo Completo"
     const sortedItems = [...itemsToRender].sort((a, b) => {
         if (a.categoria !== b.categoria) {
             return a.categoria.localeCompare(b.categoria);
         }
         return a.nome.localeCompare(b.nome);
     });
+
+    html += `<h3 class="catalog-category">CATALOGO COMPLETO</h3>`;
 
     sortedItems.forEach(item => {
         if (item.categoria !== currentCategory) {
@@ -222,12 +312,14 @@ function renderCatalog(itemsToRender) {
     if(catalogListEl) catalogListEl.innerHTML = html;
 }
 
-function handleSearch() {
+// MODIFICATA: Ora gestisce i prodotti frequenti durante la ricerca
+async function handleSearch() {
     const searchTerm = searchInputEl.value.toLowerCase().trim();
-    
+    const frequentProducts = await getFrequentProducts(); // Carica i prodotti frequenti
+
     if (searchTerm.length < 2 && searchTerm !== "") {
-        // Se la ricerca è breve, mostriamo solo l'intero catalogo.
-        renderCatalog(catalogo);
+        // Se la ricerca è breve, mostra il catalogo intero con i frequenti in cima
+        renderCatalog(catalogo, frequentProducts);
         return;
     }
     
@@ -235,14 +327,20 @@ function handleSearch() {
         item.nome.toLowerCase().includes(searchTerm) || 
         item.categoria.toLowerCase().includes(searchTerm)
     );
+    
+    // Filtra anche i prodotti frequenti
+    const filteredFrequent = frequentProducts.filter(item => 
+        item.name.toLowerCase().includes(searchTerm)
+    );
 
-    renderCatalog(filteredCatalog);
+    // Quando cerchi, mostra solo i risultati filtrati (dando precedenza ai frequenti)
+    renderCatalog(filteredCatalog, filteredFrequent);
 
     catalogListEl.scrollTop = 0; 
 }
 
 
-/* -------------- FUNZIONI LISTA SPESA (RENDER e LOGICA) -------------- */
+/* -------------- FUNZIONI LISTA SPESA (addItem MODIFICATA) -------------- */
 
 function renderShopping() {
     const sortedShopping = [...shopping].sort((a, b) => {
@@ -280,7 +378,8 @@ function syncShoppingList() {
     }
 }
 
-function addItem(name, imgUrl) {
+// MODIFICATA: Aggiunge il flag isManual per tracciare le aggiunte manuali
+function addItem(name, imgUrl, isManual = false) {
     const existingItem = shopping.find(item => item.nome === name);
 
     if (existingItem) {
@@ -293,6 +392,11 @@ function addItem(name, imgUrl) {
             done: false,
             imgUrl: imgUrl || 'https://placehold.co/40x40' 
         });
+    }
+    
+    // 🚀 NUOVO: Chiama la funzione di auto-apprendimento se è un'aggiunta manuale
+    if (isManual) {
+        saveManualAddition(name);
     }
 
     renderShopping();
@@ -328,7 +432,7 @@ function handleListClick(e) {
     renderShopping();
 }
 
-/* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE -------------- */
+/* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE (Invariate) -------------- */
 
 async function saveList() {
     if (shopping.length === 0 || !CURRENT_USER_ID) {
@@ -389,7 +493,7 @@ async function loadLists() {
 }
 
 
-/* -------------- FUNZIONI PDF e CONDIVISIONE -------------- */
+/* -------------- FUNZIONI PDF e CONDIVISIONE (Invariate) -------------- */
 
 function downloadStyledPDF() {
     if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -481,7 +585,7 @@ function sharePDF() {
 }
 
 
-/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
+/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA - Invariate) -------------- */
 
 async function fetchAllRegisteredUsers() {
     try {
@@ -595,18 +699,22 @@ function addAllEventListeners() {
         if (itemEl) {
             const name = itemEl.dataset.name;
             const imgUrl = itemEl.dataset.imgUrl;
-            addItem(name, imgUrl);
+            // Aggiunta da catalogo (isManual = false)
+            addItem(name, imgUrl); 
         }
     });
     
+    // MODIFICATA: la ricerca ora gestisce i prodotti frequenti
     searchInputEl.addEventListener("input", handleSearch); 
     
     shoppingItemsEl.addEventListener("click", handleListClick);
     
+    // MODIFICATA: L'aggiunta manuale ora registra l'evento per l'auto-apprendimento
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
-            addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale'); 
+            // 🚀 NUOVO: Passiamo true per indicare che è un'aggiunta manuale
+            addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale', true); 
             addManualInputEl.value = "";
         }
     });

@@ -1,10 +1,10 @@
 /* =================================================================
-   FILE: script.js - Codice Completo e Funzionante
+   FILE: script.js - Codice Aggiornato con Auto-Apprendimento e PDF Stilizzato
    ================================================================= */
 
 /* -------------- FIREBASE CONFIG (DEVI SOSTITUIRE!) -------------- */
-// SOSTITUISCI CON LA TUA CONFIGURAZIONE REALE DI FIREBASE!
 const firebaseConfig = {
+  // SOSTITUISCI CON LA TUA CONFIGURAZIONE REALE!
   apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVdUIOb9J40", 
   authDomain: "lista-spesa-db7f7.firebaseapp.com",
   projectId: "lista-spesa-db7f7",
@@ -14,7 +14,6 @@ const firebaseConfig = {
   measurementId: "G-64QH2WHH2X"
 };
 
-// Inizializzazione Firebase (Dipende dalle librerie nel tuo HTML!)
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const dbRT = firebase.database(); 
@@ -23,6 +22,7 @@ const dbRT = firebase.database();
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
+// NUOVA COLLEZIONE per tracciare le aggiunte manuali
 const FREQUENT_PRODUCTS_COLLECTION = "prodotti_frequenti"; 
 
 let pdfNote = ""; 
@@ -32,76 +32,163 @@ let actionPending = '';
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
 let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
 
-/* -------------- CATALOGO PRODOTTI ESTESO (INVARIANTI) -------------- */
+/* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
 const catalogo = [
-    // --- FRUTTA E VERDURA ---
+    // --- FRUTTA E VERDURA (Integrate) ---
     { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Mela" },
     { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Banana" },
     { categoria: "Frutta fresca", nome: "Arance", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Arancia" },
+    { categoria: "Frutta fresca", nome: "Limoni", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Limoni" },
+    { categoria: "Frutta fresca", nome: "Kiwi", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Kiwi" },
+    { categoria: "Frutta fresca", nome: "Uva (bianca/nera)", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Uva" },
     { categoria: "Frutta secca", nome: "Noci (sacchetto)", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Noci" },
+    { categoria: "Frutta secca", nome: "Mandorle", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Mand" },
     { categoria: "Verdura (Foglia)", nome: "Insalata iceberg", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Insala" },
+    { categoria: "Verdura (Foglia)", nome: "Spinaci freschi", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Spinaci" },
+    { categoria: "Verdura (Foglia)", nome: "Rucola (vaschetta)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Rucola" },
     { categoria: "Verdura (Tubero/Radice)", nome: "Patate", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Patate" },
+    { categoria: "Verdura (Tubero/Radice)", nome: "Carote (sacchetto)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Carote" },
     { categoria: "Verdura (Frutto)", nome: "Pomodori ramati", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Pomo" },
+    { categoria: "Verdura (Frutto)", nome: "Zucchine", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Zucch" },
+    { categoria: "Verdura (Frutto)", nome: "Peperoni (rossi/gialli)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Pepero" },
     { categoria: "Aromi/Erbe", nome: "Cipolle", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Cipolle" },
+    { categoria: "Aromi/Erbe", nome: "Aglio", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Aglio" },
+    { categoria: "Aromi/Erbe", nome: "Prezzemolo (mazzetto)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Prezz" },
     
-    // --- CARNE E PESCE ---
+    // --- CARNE E PESCE (Integrate) ---
     { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Manzo" },
+    { categoria: "Carne rossa", nome: "Carne macinata (bovino)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Maci" },
     { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Pollo" },
+    { categoria: "Carne bianca", nome: "Cosce di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cosce" },
     { categoria: "Salumi/Affettati", nome: "Prosciutto cotto (vaschetta)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cotto" },
+    { categoria: "Salumi/Affettati", nome: "Prosciutto crudo (vaschetta)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Crudo" },
+    { categoria: "Salumi/Affettati", nome: "Fesa di tacchino", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Tacch" },
     { categoria: "Pesce fresco", nome: "Salmone (filetto)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Salmon" },
+    { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Orata" },
     { categoria: "Pesce in scatola", nome: "Tonno sott'olio (scatola)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Tonno" },
+    { categoria: "Pesce in scatola", nome: "Sgombro in scatola", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Sgomb" },
 
-    // --- SURGELATI ---
+    // --- SURGELATI (Estesa) ---
     { categoria: "Surgelati (Verdura)", nome: "Piselli fini (sacchetto)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Piselli" },
+    { categoria: "Surgelati (Verdura)", nome: "Spinaci in cubetti", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=SpinS" },
     { categoria: "Surgelati (Pasti)", nome: "Pizza Margherita (surgelata)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Pizza" },
+    { categoria: "Surgelati (Pasti)", nome: "Bastoncini di pesce", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Basto" },
     { categoria: "Surgelati (Dolci)", nome: "Gelato alla crema (vaschetta)", imgUrl: "https://placehold.co/50x50/FCA5A5/000000?text=Gelato" },
-    
-    // --- LATTICINI E UOVA ---
+    { categoria: "Surgelati (Dolci)", nome: "Torta al cioccolato surgelata", imgUrl: "https://placehold.co/50x50/FCA5A5/000000?text=TortaS" },
+    { categoria: "Ghiaccio", nome: "Ghiaccio in cubetti (sacchetto)", imgUrl: "https://placehold.co/50x50/9CA3AF/FFFFFF?text=Ghiaccio" },
+
+    // --- LATTICINI E UOVA (Integrate) ---
     { categoria: "Latte e derivati", nome: "Latte intero", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Latte" },
+    { categoria: "Latte e derivati", nome: "Latte parzialmente scremato", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=LattePS" },
+    { categoria: "Latte e derivati", nome: "Yogurt (bianco/frutta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Yogurt" },
     { categoria: "Formaggi freschi", nome: "Mozzarella (busta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Mozza" },
+    { categoria: "Formaggi freschi", nome: "Ricotta", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Ricotta" },
+    { categoria: "Formaggi freschi", nome: "Stracchino/Crescenza", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=St racc" },
     { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Parmig" },
+    { categoria: "Formaggi stagionati", nome: "Pecorino (fetta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Pecor" },
     { categoria: "Uova", nome: "Uova grandi (confezione da 6)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Uova" },
-    
-    // --- PANE, PASTA E CEREALI ---
+    { categoria: "Burro/Panna", nome: "Burro", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Burro" },
+    { categoria: "Burro/Panna", nome: "Panna da cucina", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Panna" },
+    { categoria: "Burro/Panna", nome: "Panna da montare", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=PannaM" },
+
+    // --- PANE, PASTA E CEREALI (Estesa) ---
     { categoria: "Pane/Panificati", nome: "Pane fresco (tipo casereccio)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pane" },
+    { categoria: "Pane/Panificati", nome: "Pane integrale (fetta)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=PaneInt" },
+    { categoria: "Pane/Panificati", nome: "Fette biscottate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Fette" },
+    { categoria: "Pane/Panificati", nome: "Piadine", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Piadine" },
     { categoria: "Pasta secca", nome: "Spaghetti", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Spag" },
+    { categoria: "Pasta secca", nome: "Penne Rigate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Penne" },
+    { categoria: "Pasta secca", nome: "Fusilli", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Fusilli" },
+    { categoria: "Pasta fresca", nome: "Pasta all'uovo (tagliatelle)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=PastaF" },
     { categoria: "Riso", nome: "Riso Arborio", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Riso" },
+    { categoria: "Cereali colazione", nome: "Corn flakes", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Cereali" },
+    { categoria: "Cereali colazione", nome: "Muesli/Granola", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Muesli" },
     
-    // --- BEVANDE ---
+    // --- BEVANDE (Estesa) ---
     { categoria: "Acqua", nome: "Acqua naturale (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Acqua" },
+    { categoria: "Acqua", nome: "Acqua frizzante (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=AcquaF" },
+    { categoria: "Succhi/Bibite", nome: "Succo d'arancia (cartone)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Succo" },
     { categoria: "Succhi/Bibite", nome: "Coca-Cola (lattine)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Coca" },
+    { categoria: "Succhi/Bibite", nome: "The freddo (limone/pesca)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=The" },
     { categoria: "Caffè/Tè", nome: "Caffè macinato (moka)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffèM" },
-    
-    // --- DISPENSA E SCATOLAME ---
+    { categoria: "Caffè/Tè", nome: "Capsule/Cialde per caffè", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffèC" },
+    { categoria: "Caffè/Tè", nome: "Tè nero (bustine)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=Tè" },
+    { categoria: "Birra", nome: "Birra Lager (confezione)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Birra" },
+    { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoR" },
+    { categoria: "Vino", nome: "Vino bianco (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoB" },
+
+    // --- DISPENSA E SCATOLAME (Estesa) ---
     { categoria: "Legumi secchi/scatolame", nome: "Fagioli in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Fagioli" },
+    { categoria: "Legumi secchi/scatolame", nome: "Ceci in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Ceci" },
+    { categoria: "Legumi secchi/scatolame", nome: "Lenticchie secche", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Lenti" },
     { categoria: "Pomodori/Salse", nome: "Passata di pomodoro", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Passat" },
+    { categoria: "Pomodori/Salse", nome: "Pelati in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Pelati" },
+    { categoria: "Sottaceti/Sottolio", nome: "Olive snocciolate", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Olive" },
+    { categoria: "Sottaceti/Sottolio", nome: "Funghi sott'olio", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Funghi" },
     { categoria: "Olii/Aceti", nome: "Olio Extra Vergine di Oliva (1L)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=OEVO" },
+    { categoria: "Olii/Aceti", nome: "Olio di semi (girasole)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=OlioS" },
+    { categoria: "Olii/Aceti", nome: "Aceto di vino bianco", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=AcetoB" },
     
-    // --- CONDIMENTI E INGREDIENTI BASE ---
+    // --- CONDIMENTI E INGREDIENTI BASE (Estesa) ---
     { categoria: "Condimenti", nome: "Sale fino", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Sale" },
+    { categoria: "Condimenti", nome: "Zucchero semolato", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Zucch" },
+    { categoria: "Condimenti", nome: "Farina 00", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Farina" },
+    { categoria: "Condimenti", nome: "Lievito di birra (cubetto)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Lievit" },
     { categoria: "Salse", nome: "Maionese", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Maio" },
+    { categoria: "Salse", nome: "Ketchup", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Ketch" },
+    { categoria: "Salse", nome: "Senape", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Sena" },
+    { categoria: "Spezie", nome: "Origano", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Spezie" },
+    { categoria: "Spezie", nome: "Pepe nero (macinato)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Pepe" },
     
-    // --- DOLCI E SNACK ---
+    // --- DOLCI E SNACK (Integrate) ---
     { categoria: "Biscotti/Merendine", nome: "Biscotti secchi", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Biscot" },
+    { categoria: "Biscotti/Merendine", nome: "Merendine confezionate", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Meren" },
+    { categoria: "Cioccolato", nome: "Tavoletta di cioccolato al latte", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Ciocc" },
     { categoria: "Snack salati", nome: "Patatine (sacchetto grande)", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Chips" },
+    { categoria: "Snack salati", nome: "Taralli/Crackers", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Crack" },
+    { categoria: "Confetture/Creme", nome: "Marmellata di fragole", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Marmel" },
+    { categoria: "Confetture/Creme", nome: "Crema spalmabile al cioccolato", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Crema" },
 
-    // --- IGIENE PERSONALE E SALUTE ---
+    // --- IGIENE PERSONALE E SALUTE (Estesa) ---
     { categoria: "Igiene orale", nome: "Dentifricio", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Denti" },
+    { categoria: "Igiene orale", nome: "Spazzolino", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Spazz" },
     { categoria: "Corpo/Capelli", nome: "Shampoo", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Shamp" },
+    { categoria: "Corpo/Capelli", nome: "Bagnoschiuma", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Bagno" },
+    { categoria: "Corpo/Capelli", nome: "Balsamo per capelli", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Balsam" },
+    { categoria: "Corpo/Capelli", nome: "Sapone per mani (liquido)", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Sapone" },
+    { categoria: "Protezione/Cura Pelle", nome: "Crema idratante corpo", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=CremaI" },
+    { categoria: "Protezione/Cura Pelle", nome: "Deodorante spray/roll-on", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Deodo" },
     { categoria: "Carta/Fazzoletti", nome: "Carta igienica (rotoli)", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=CartaI" },
-    
-    // --- PULIZIA CASA E ACCESSORI ---
-    { categoria: "Lavanderia", nome: "Detersivo lavatrice (liquido)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Lavand" },
-    { categoria: "Superfici/Pavimenti", nome: "Sgrassatore universale", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sgrass" },
-    { categoria: "Cucina/Lavastoviglie", nome: "Pastiglie lavastoviglie", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=LavaS" },
+    { categoria: "Carta/Fazzoletti", nome: "Fazzoletti di carta", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Fazzo" },
+    { categoria: "Assorbenti/Protezioni", nome: "Assorbenti igienici", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Prot" },
+    { categoria: "Salute", nome: "Cerotti", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Cero" },
+    { categoria: "Salute", nome: "Paracetamolo (Tachipirina/Efferalgan)", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Para" },
 
-    // --- PETS E VARIE ---
+    // --- PULIZIA CASA E ACCESSORI (Integrate) ---
+    { categoria: "Lavanderia", nome: "Detersivo lavatrice (liquido)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Lavand" },
+    { categoria: "Lavanderia", nome: "Ammorbidente", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Am morb" },
+    { categoria: "Lavanderia", nome: "Detersivo per capi delicati", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Delic" },
+    { categoria: "Superfici/Pavimenti", nome: "Detersivo pavimenti", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Pavim" },
+    { categoria: "Superfici/Pavimenti", nome: "Sgrassatore universale", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sgrass" },
+    { categoria: "Superfici/Pavimenti", nome: "Detergente per vetri", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Vetri" },
+    { categoria: "Cucina/Lavastoviglie", nome: "Detersivo piatti (a mano)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Piatti" },
+    { categoria: "Cucina/Lavastoviglie", nome: "Pastiglie lavastoviglie", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=LavaS" },
+    { categoria: "Accessori Pulizia", nome: "Spugne", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Spugne" },
+    { categoria: "Accessori Pulizia", nome: "Panni in microfibra", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Panni" },
+    { categoria: "Rifiuti", nome: "Sacchetti per immondizia (grandi)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sacchet" },
+    { categoria: "Rifiuti", nome: "Sacchetti per umido", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=SacUm" },
+    
+    // --- PETS E VARIE (Integrate) ---
     { categoria: "Cibo per Animali", nome: "Crocchette per cane (sacchetto)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Dog" },
+    { categoria: "Cibo per Animali", nome: "Bocconcini per gatto (lattine)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Cat" },
     { categoria: "Cucina/Usa e Getta", nome: "Pellicola trasparente", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pelli" },
-    { categoria: "Varie", nome: "Pile stilo AA", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pile" }
+    { categoria: "Cucina/Usa e Getta", nome: "Carta alluminio", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Allum" },
+    { categoria: "Cucina/Usa e Getta", nome: "Tovaglioli di carta", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Tova" },
+    { categoria: "Varie", nome: "Pile stilo AA", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pile" },
+    { categoria: "Varie", nome: "Lampadine (E27)", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Lamp" }
 ];
 
-/* -------------- FUNZIONI BASE -------------- */
+/* -------------- FUNZIONI BASE (INVARIANTI) -------------- */
 
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -110,6 +197,7 @@ function generateUUID() {
     });
 }
 
+// MODIFICATA: Ora carica i prodotti frequenti prima di renderizzare
 async function initializeApp() {
     if (CURRENT_USER_ID) {
         loginGateEl.style.display = 'none';
@@ -119,20 +207,17 @@ async function initializeApp() {
         listenToActiveUsers();
         listenToActiveList();
         
-        // Registra l'utente come attivo (con disconnessione automatica)
         dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
-        dbRT.ref('active_users/' + CURRENT_USER_ID).set({
-            firstName: CURRENT_USER_DATA.firstName,
-            lastName: CURRENT_USER_DATA.lastName,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
         
+        // 🚀 NUOVO: Carica i prodotti frequenti e poi renderizza il catalogo
         const frequentProducts = await getFrequentProducts(); 
         renderCatalog(catalogo, frequentProducts); 
     } else {
         loginGateEl.style.display = 'flex'; 
         mainAppEl.style.display = 'none';
         if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
+        
+        // Renderizza il catalogo base anche se non loggato
         renderCatalog(catalogo);
     }
 
@@ -140,7 +225,7 @@ async function initializeApp() {
     loadLists(); 
 }
 
-/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE -------------- */
+/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Invariate) -------------- */
 
 async function handleLogin() {
     const firstName = inputFirstNameEl.value.trim();
@@ -166,16 +251,21 @@ async function handleLogin() {
             await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).set(CURRENT_USER_DATA);
         }
         
+        dbRT.ref('active_users/' + CURRENT_USER_ID).set({
+            firstName: firstName,
+            lastName: lastName,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+
         initializeApp();
     } catch (error) {
          console.error("Errore durante il login/registrazione:", error);
-        alert("Errore di connessione a Firebase. Controlla la tua configurazione e la console."); 
+        alert("Errore di connessione o autenticazione. Riprova più tardi."); 
     }
 }
 
 function handleLogout() {
     if (CURRENT_USER_ID) {
-        // Rimuove l'utente dal Realtime DB (utenti attivi)
         dbRT.ref('active_users/' + CURRENT_USER_ID).remove();
     }
     
@@ -183,17 +273,22 @@ function handleLogout() {
     CURRENT_USER_DATA = { firstName: "", lastName: "" };
     localStorage.removeItem("user_unique_id");
     
-    // Ritorna all'interfaccia di login
     loginGateEl.style.display = 'flex';
     mainAppEl.style.display = 'none';
     if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
 }
 
 
-/* -------------- FUNZIONI DI AUTO-APPRENDIMENTO -------------- */
+/* -------------- FUNZIONI DI AUTO-APPRENDIMENTO (INVARIANTI) -------------- */
 
+/**
+ * Salva o aggiorna il conteggio di un prodotto aggiunto manualmente.
+ * @param {string} name - Nome del prodotto.
+ */
 async function saveManualAddition(name) {
     if (!CURRENT_USER_ID) return;
+
+    // Crea un ID di documento normalizzato dal nome del prodotto
     const docId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
 
     try {
@@ -203,12 +298,14 @@ async function saveManualAddition(name) {
             const doc = await transaction.get(docRef);
 
             if (doc.exists) {
+                // Se il prodotto esiste, incrementa il conteggio (contatore condiviso)
                 const newCount = (doc.data().count || 0) + 1;
                 transaction.update(docRef, { 
                     count: newCount, 
                     lastUsed: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } else {
+                // Se è la prima volta che viene aggiunto, crea il documento
                 transaction.set(docRef, {
                     name: name,
                     count: 1,
@@ -222,6 +319,10 @@ async function saveManualAddition(name) {
     }
 }
 
+/**
+ * Recupera i prodotti più frequenti dal database.
+ * @returns {Array<Object>} Lista di prodotti usati frequentemente.
+ */
 async function getFrequentProducts() {
     try {
         const snapshot = await db.collection(FREQUENT_PRODUCTS_COLLECTION)
@@ -238,13 +339,18 @@ async function getFrequentProducts() {
     }
 }
 
-/* -------------- FUNZIONI CATALOGO -------------- */
+/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA INVARIANTI) -------------- */
 
+/**
+ * Renderizza il catalogo con l'opzione dei prodotti frequenti in cima.
+ * @param {Array<Object>} itemsToRender - Prodotti standard del catalogo da renderizzare.
+ * @param {Array<Object>} frequentProducts - Prodotti da mostrare nella sezione 'Frequenti'.
+ */
 function renderCatalog(itemsToRender, frequentProducts = []) {
     let html = '';
     let currentCategory = '';
 
-    // 1. Sezione "Frequenti"
+    // 1. Aggiungi la sezione "Frequenti" solo se ci sono prodotti
     if (frequentProducts.length > 0) {
         html += `<h3 class="catalog-category">⭐ FREQUENTEMENTE USATI</h3>`;
         
@@ -256,7 +362,7 @@ function renderCatalog(itemsToRender, frequentProducts = []) {
         });
     }
 
-    // 2. Sezione "Catalogo Completo"
+    // 2. Aggiungi la sezione "Catalogo Completo"
     const sortedItems = [...itemsToRender].sort((a, b) => {
         if (a.categoria !== b.categoria) {
             return a.categoria.localeCompare(b.categoria);
@@ -268,10 +374,6 @@ function renderCatalog(itemsToRender, frequentProducts = []) {
 
     sortedItems.forEach(item => {
         if (item.categoria !== currentCategory) {
-            // Evita di ripetere la categoria se è vuota o già stampata
-            if (currentCategory !== '' && html.slice(-20).indexOf('catalog-category') === -1) {
-                // Aggiungi un separatore se necessario, ma di solito la categoria basta
-            }
             html += `<h3 class="catalog-category">${item.categoria}</h3>`;
             currentCategory = item.categoria;
         }
@@ -284,38 +386,40 @@ function renderCatalog(itemsToRender, frequentProducts = []) {
     if(catalogListEl) catalogListEl.innerHTML = html;
 }
 
+// MODIFICATA: Ora gestisce i prodotti frequenti durante la ricerca
 async function handleSearch() {
     const searchTerm = searchInputEl.value.toLowerCase().trim();
-    const frequentProducts = await getFrequentProducts();
+    const frequentProducts = await getFrequentProducts(); // Carica i prodotti frequenti
 
+    if (searchTerm.length < 2 && searchTerm !== "") {
+        // Se la ricerca è breve, mostra il catalogo intero con i frequenti in cima
+        renderCatalog(catalogo, frequentProducts);
+        return;
+    }
+    
     const filteredCatalog = catalogo.filter(item => 
         item.nome.toLowerCase().includes(searchTerm) || 
         item.categoria.toLowerCase().includes(searchTerm)
     );
     
+    // Filtra anche i prodotti frequenti
     const filteredFrequent = frequentProducts.filter(item => 
         item.name.toLowerCase().includes(searchTerm)
     );
 
-    // Se la ricerca è vuota, mostra tutto il catalogo con i frequenti in cima
-    if (searchTerm === "") {
-        renderCatalog(catalogo, frequentProducts);
-    } else {
-         // Altrimenti mostra i risultati filtrati (dando precedenza ai frequenti filtrati)
-        renderCatalog(filteredCatalog, filteredFrequent);
-    }
-    
+    // Quando cerchi, mostra solo i risultati filtrati (dando precedenza ai frequenti)
+    renderCatalog(filteredCatalog, filteredFrequent);
+
     catalogListEl.scrollTop = 0; 
 }
 
 
-/* -------------- FUNZIONI LISTA SPESA E SINCRONIZZAZIONE -------------- */
+/* -------------- FUNZIONI LISTA SPESA (addItem MODIFICATA) -------------- */
 
 function renderShopping() {
     const sortedShopping = [...shopping].sort((a, b) => {
         if (a.done === b.done) return 0;
-        return a.done ? 1 : -1; // Metodo 1: gli elementi fatti vanno in fondo
-        // return a.done ? -1 : 1; // Metodo 2: gli elementi fatti vanno in cima
+        return a.done ? 1 : -1;
     });
 
     shoppingItemsEl.innerHTML = sortedShopping.map((item) => {
@@ -343,12 +447,12 @@ function renderShopping() {
 
 function syncShoppingList() {
     if (CURRENT_USER_ID) {
-        // Sincronizza la lista corrente con il Realtime Database
         dbRT.ref('active_list/').set(shopping)
             .catch(error => console.error("Errore sincronizzazione Realtime:", error));
     }
 }
 
+// MODIFICATA: Aggiunge il flag isManual per tracciare le aggiunte manuali
 function addItem(name, imgUrl, isManual = false) {
     const existingItem = shopping.find(item => item.nome === name);
 
@@ -364,11 +468,9 @@ function addItem(name, imgUrl, isManual = false) {
         });
     }
     
-    // Auto-apprendimento: se aggiunto manualmente, salva l'evento.
+    // 🚀 NUOVO: Chiama la funzione di auto-apprendimento se è un'aggiunta manuale
     if (isManual) {
         saveManualAddition(name);
-        // Dopo l'aggiunta manuale, ricarica il catalogo per mostrare subito il prodotto frequente
-        getFrequentProducts().then(frequent => renderCatalog(catalogo, frequent));
     }
 
     renderShopping();
@@ -404,7 +506,7 @@ function handleListClick(e) {
     renderShopping();
 }
 
-/* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE -------------- */
+/* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE (Invariate) -------------- */
 
 async function saveList() {
     if (shopping.length === 0 || !CURRENT_USER_ID) {
@@ -464,10 +566,18 @@ async function loadLists() {
     }
 }
 
-/* -------------- FUNZIONI PDF e CONDIVISIONE (STILIZZATE) -------------- */
 
+/* -------------- FUNZIONI PDF e CONDIVISIONE (AGGIORNATE PER STILE) -------------- */
+
+/**
+ * Genera l'HTML stilizzato (mockup) della lista spesa per la conversione PDF.
+ * Questo è il cuore dello stile Dark Mode.
+ * @param {Array<Object>} list - La lista della spesa corrente.
+ * @param {string} note - La nota utente da includere.
+ * @returns {string} L'HTML completo e stilizzato.
+ */
 function generateStyledListHTML(list, note) {
-    // Funzione per la mappatura colori dei badge (estratta dalle categorie del catalogo)
+    // Mappatura semplificata dei colori per i badge (basata sull'estensione del catalogo)
     const getColor = (name) => {
         if (name.includes("Biscotti") || name.includes("Cioccolato") || name.includes("Merendine")) return "#EC4899"; // Rosa (Dolci)
         if (name.includes("Burro") || name.includes("Panna") || name.includes("Latte") || name.includes("Yogurt") || name.includes("Formaggi") || name.includes("Uova")) return "#FBBF24"; // Giallo (Latticini)
@@ -481,9 +591,9 @@ function generateStyledListHTML(list, note) {
     let listHtml = list.map((item) => {
         const itemClass = item.done ? 'pdf-done-item' : 'pdf-pending-item';
         const color = getColor(item.nome);
+        // Usa le prime 4 lettere del prodotto per il badge (se lungo almeno 4)
         const iconText = item.nome.length >= 4 ? item.nome.substring(0, 4).toUpperCase() : item.nome.toUpperCase(); 
         
-        // Stili in linea per la Dark Mode compatibile con html2canvas
         return `
             <div class="${itemClass}" style="
                 display: flex; 
@@ -524,11 +634,10 @@ function generateStyledListHTML(list, note) {
         `;
     }).join('');
 
-    // Stile del container principale (Dark Mode)
     return `
         <div style="padding: 10px; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif;">
             <h1 style="font-size: 18px; text-align: center; margin-bottom: 5px; color: #60A5FA;">Lista Spesa Condivisa</h1>
-            ${note ? `<p style="font-size: 9px; text-align: center; color: #aaa; margin-bottom: 10px;">Nota: ${note}</p>` : ''}
+            ${note ? `<p style="font-size: 9px; text-align: center; color: #aaa; margin-bottom: 10px;">Note: ${note}</p>` : ''}
             <div style="border: 1px solid #333; padding: 5px; border-radius: 5px;">
                 ${listHtml}
             </div>
@@ -536,7 +645,9 @@ function generateStyledListHTML(list, note) {
     `;
 }
 
+
 function downloadStyledPDF() {
+    // Verifica che entrambe le librerie siano caricate
     if (!window.jspdf || !window.html2canvas) {
         alert("Librerie jsPDF/html2canvas non caricate. Assicurati che siano incluse nell'HTML.");
         return;
@@ -544,36 +655,40 @@ function downloadStyledPDF() {
 
     const printArea = document.getElementById("pdfPrintArea");
     
-    // 1. Inietta l'HTML stilizzato
+    // 1. Genera l'HTML stilizzato e iniettalo nell'area nascosta
     printArea.innerHTML = generateStyledListHTML(shopping, pdfNote);
     
     const { jsPDF } = window.jspdf;
     
-    // 2. Converto l'HTML in un'immagine (canvas)
+    // 2. Converti l'HTML in un canvas (immagine) con alta risoluzione
     html2canvas(printArea, { 
         backgroundColor: '#1a1a1a', 
         scale: 2 
     }).then(canvas => {
         const imgData = canvas.toDataURL('image/png');
         
-        const pdfWidth = 210; 
-        const pdfHeight = 297; 
+        const pdfWidth = 210; // Larghezza A4 in mm
+        const pdfHeight = 297; // Altezza A4 in mm
         const margin = 10;
         
+        // Calcola le dimensioni proporzionali dell'immagine nel PDF
         const imgWidth = pdfWidth - (2 * margin); 
         const imgHeight = canvas.height * imgWidth / canvas.width; 
         
-        let heightLeft = imgHeight; 
+        let heightLeft = imgHeight; // Altezza totale da stampare
         
+        // Crea il documento PDF. L'altezza iniziale è l'altezza standard A4 o l'altezza del contenuto (la maggiore)
         const doc = new jsPDF('p', 'mm', [pdfWidth, Math.max(pdfHeight, imgHeight + (2 * margin))]); 
         
         let position = 0;
 
-        // 3. Aggiungo l'immagine al PDF (gestendo le pagine lunghe)
+        // 3. Aggiungi l'immagine al PDF
         doc.addImage(imgData, 'PNG', margin, position + margin, imgWidth, imgHeight);
         heightLeft -= (pdfHeight - margin);
 
+        // Gestisce pagine multiple per liste molto lunghe (anti-taglio)
         while (heightLeft > 0) {
+            // Calcola la posizione per il ritaglio sulla pagina successiva
             position = - (imgHeight - heightLeft); 
             doc.addPage();
             doc.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
@@ -582,7 +697,7 @@ function downloadStyledPDF() {
 
         doc.save("ListaSpesaStilizzata.pdf");
         
-        // Pulisce l'area di stampa e la nota
+        // Pulisci l'area di stampa e la nota PDF
         pdfNote = ""; 
         pdfNoteInputEl.value = "";
         pdfNoteContainerEl.style.display = 'none'; 
@@ -592,6 +707,8 @@ function downloadStyledPDF() {
 
 
 function sharePDF() {
+    // La funzione di Condividi ora tenta la condivisione testuale, ma se fallisce, 
+    // ricade nel download del PDF stilizzato.
     const listText = shopping.map(item => 
         `[${item.done ? 'X' : ' '}] ${item.nome} (Qta: ${item.qty})`
     ).join('\n');
@@ -607,20 +724,21 @@ function sharePDF() {
             .catch((error) => {
                 console.error('Errore durante la condivisione web:', error);
                 alert("Condivisione fallita. Verrà scaricato il PDF stilizzato.");
-                downloadStyledPDF(); 
+                downloadStyledPDF(); // Ricade nel download stilizzato
             });
     } else {
         alert("Il tuo browser non supporta l'API di condivisione nativa. Verrà scaricato il PDF stilizzato.");
-        downloadStyledPDF(); 
+        downloadStyledPDF(); // Ricade nel download stilizzato
     }
     
+    // Pulisci la nota
     pdfNote = ""; 
     pdfNoteInputEl.value = "";
     pdfNoteContainerEl.style.display = 'none';
 }
 
 
-/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
+/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA - Invariate) -------------- */
 
 async function fetchAllRegisteredUsers() {
     try {
@@ -693,10 +811,10 @@ function listenToActiveList() {
 }
 
 
-/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA -------------- */
+/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA (INVARIANTI) -------------- */
 
 function getDOMElements() {
-    // Collega tutti gli ID necessari dal DOM
+    // Funzione per ottenere tutti gli elementi DOM necessari
     loginGateEl = document.getElementById("loginGate");
     mainAppEl = document.getElementById("mainApp");
     loginButtonEl = document.getElementById("loginButton");
@@ -734,16 +852,21 @@ function addAllEventListeners() {
         if (itemEl) {
             const name = itemEl.dataset.name;
             const imgUrl = itemEl.dataset.imgUrl;
+            // Aggiunta da catalogo (isManual = false)
             addItem(name, imgUrl); 
         }
     });
     
+    // MODIFICATA: la ricerca ora gestisce i prodotti frequenti
     searchInputEl.addEventListener("input", handleSearch); 
+    
     shoppingItemsEl.addEventListener("click", handleListClick);
     
+    // MODIFICATA: L'aggiunta manuale ora registra l'evento per l'auto-apprendimento
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
+            // 🚀 NUOVO: Passiamo true per indicare che è un'aggiunta manuale
             addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale', true); 
             addManualInputEl.value = "";
         }
@@ -836,7 +959,6 @@ async function checkLoginStatus() {
 
 
 document.addEventListener('DOMContentLoaded', () => {
-    // La funzione getDOMElements DEVE essere chiamata per collegare gli elementi HTML
     if (!getDOMElements()) return; 
     addAllEventListeners();
     checkLoginStatus(); 

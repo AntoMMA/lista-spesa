@@ -31,36 +31,142 @@ let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, lo
 
 /* -------------- CATALOGO PRODOTTI (Placeholder) -------------- */
 const catalogo = [
-    // FRUTTA E VERDURA
-    { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
-    { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
-    { categoria: "Frutta fresca", nome: "Arance da tavola", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
-    { categoria: "Verdura", nome: "Insalata iceberg", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Verdura" },
-    { categoria: "Verdura", nome: "Pomodori ramati", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Verdura" },
+    /* =========================================================
+       SEZIONE 1: FRUTTA E VERDURA 🍎🥦
+       ========================================================= */
+    { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Mela" },
+    { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Banana" },
+    { categoria: "Frutta fresca", nome: "Arance", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Arancia" },
+    { categoria: "Frutta fresca", nome: "Uva (bianca/nera)", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Uva" },
+    { categoria: "Frutta secca", nome: "Noci (sacchetto)", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Noci" },
+    { categoria: "Frutta secca", nome: "Mandorle", imgUrl: "https://placehold.co/50x50/8B5CF6/FFFFFF?text=Mand" },
+
+    { categoria: "Verdura (Foglia)", nome: "Insalata iceberg", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Insala" },
+    { categoria: "Verdura (Foglia)", nome: "Spinaci freschi", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Spinaci" },
+    { categoria: "Verdura (Tubero/Radice)", nome: "Patate", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Patate" },
+    { categoria: "Verdura (Frutto)", nome: "Pomodori ramati", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Pomo" },
+    { categoria: "Verdura (Frutto)", nome: "Zucchine", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Zucch" },
+    { categoria: "Aromi/Erbe", nome: "Cipolle", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Cipolle" },
+    { categoria: "Aromi/Erbe", nome: "Aglio", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Aglio" },
+
+    /* =========================================================
+       SEZIONE 2: CARNE, PESCE E SURGELATI 🥩🐟🧊
+       ========================================================= */
+    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Manzo" },
+    { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Pollo" },
+    { categoria: "Salumi/Affettati", nome: "Prosciutto cotto (vaschetta)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cotto" },
+    { categoria: "Salumi/Affettati", nome: "Fesa di tacchino", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Tacch" },
     
-    // CARNE E PESCE
-    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Carne" },
-    { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Carne" },
-    { categoria: "Pesce fresco", nome: "Salmone", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Pesce" },
+    { categoria: "Pesce fresco", nome: "Salmone (filetto)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Salmon" },
+    { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Orata" },
+    { categoria: "Pesce in scatola", nome: "Tonno sott'olio (scatola)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Tonno" },
+
+    { categoria: "Surgelati (Verdura)", nome: "Piselli fini (sacchetto)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Piselli" },
+    { categoria: "Surgelati (Pasti)", nome: "Pizza Margherita (surgelata)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Pizza" },
+    { categoria: "Surgelati (Pasti)", nome: "Bastoncini di pesce", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Basto" },
     
-    // LATTICINI E UOVA
+    /* =========================================================
+       SEZIONE 3: LATTICINI E DISPENSA REFRIGERATA 🧀🥚
+       ========================================================= */
     { categoria: "Latte e derivati", nome: "Latte intero", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Latte" },
-    { categoria: "Formaggi freschi", nome: "Mozzarella", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Formaggio" },
+    { categoria: "Latte e derivati", nome: "Yogurt (bianco/frutta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Yogurt" },
+    { categoria: "Formaggi freschi", nome: "Mozzarella (busta)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Mozza" },
+    { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Parmig" },
+    { categoria: "Formaggi freschi", nome: "Ricotta", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Ricotta" },
     { categoria: "Uova", nome: "Uova grandi (confezione da 6)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Uova" },
+    { categoria: "Burro/Panna", nome: "Burro", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Burro" },
+    { categoria: "Burro/Panna", nome: "Panna da cucina", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Panna" },
 
-    // PASTA, PANE E CEREALI
-    { categoria: "Pasta secca", nome: "Spaghetti", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pasta" },
-    { categoria: "Pane", nome: "Pane fresco (tipo casereccio)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pane" },
+    /* =========================================================
+       SEZIONE 4: PANE, PASTA E CEREALI 🍞🍝
+       ========================================================= */
+    { categoria: "Pane/Panificati", nome: "Pane fresco (tipo casereccio)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pane" },
+    { categoria: "Pane/Panificati", nome: "Fette biscottate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Fette" },
+    { categoria: "Pasta secca", nome: "Spaghetti", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Spag" },
+    { categoria: "Pasta secca", nome: "Penne Rigate", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Penne" },
+    { categoria: "Riso", nome: "Riso Arborio", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Riso" },
+    { categoria: "Cereali colazione", nome: "Corn flakes", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Cereali" },
     
-    // BEVANDE E ALCOLICI
-    { categoria: "Acqua", nome: "Acqua naturale (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Bevande" },
-    { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Vino" },
-    
-    // IGIENE E CASA
-    { categoria: "Igiene personale", nome: "Dentifricio", imgUrl: "https://placehold.co/50x50/F97316/FFFFFF?text=Igiene" },
-    { categoria: "Pulizia casa", nome: "Detersivo pavimenti", imgUrl: "https://placehold.co/50x50/F97316/FFFFFF?text=Casa" },
+    /* =========================================================
+       SEZIONE 5: BEVANDE E ALCOLICI 💧🍷
+       ========================================================= */
+    { categoria: "Acqua", nome: "Acqua naturale (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Acqua" },
+    { categoria: "Succhi/Bibite", nome: "Succo d'arancia (cartone)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Succo" },
+    { categoria: "Succhi/Bibite", nome: "Coca-Cola (lattine)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Coca" },
+    { categoria: "Birra", nome: "Birra Lager (confezione)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Birra" },
+    { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoR" },
+
+    /* =========================================================
+       SEZIONE 6: CONSERVE E SCATOLAME 🥫
+       ========================================================= */
+    { categoria: "Legumi secchi/scatolame", nome: "Fagioli in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Fagioli" },
+    { categoria: "Legumi secchi/scatolame", nome: "Ceci in scatola", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Ceci" },
+    { categoria: "Pomodori/Salse", nome: "Passata di pomodoro", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Passat" },
+    { categoria: "Sottaceti/Sottolio", nome: "Olive snocciolate", imgUrl: "https://placehold.co/50x50/F59E0B/000000?text=Olive" },
+
+    /* =========================================================
+       SEZIONE 7: OLII, CONDIMENTI E SPEZIE 🧂
+       ========================================================= */
+    { categoria: "Olii", nome: "Olio Extra Vergine di Oliva (1L)", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=OEVO" },
+    { categoria: "Condimenti", nome: "Sale fino", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Sale" },
+    { categoria: "Condimenti", nome: "Zucchero semolato", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Zucch" },
+    { categoria: "Salse", nome: "Maionese", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Maio" },
+    { categoria: "Spezie", nome: "Origano", imgUrl: "https://placehold.co/50x50/4B5563/FFFFFF?text=Spezie" },
+
+    /* =========================================================
+       SEZIONE 8: DOLCI E SNACK 🍪🍫
+       ========================================================= */
+    { categoria: "Biscotti/Merendine", nome: "Biscotti secchi", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Biscot" },
+    { categoria: "Cioccolato", nome: "Tavoletta di cioccolato al latte", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Ciocc" },
+    { categoria: "Snack salati", nome: "Patatine (sacchetto grande)", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Chips" },
+    { categoria: "Confetture/Creme", nome: "Marmellata di fragole", imgUrl: "https://placehold.co/50x50/EC4899/FFFFFF?text=Marmel" },
+
+    /* =========================================================
+       SEZIONE 9: IGIENE PERSONALE E COSMETICI 🧴🛁
+       ========================================================= */
+    { categoria: "Igiene orale", nome: "Dentifricio", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Denti" },
+    { categoria: "Igiene orale", nome: "Spazzolino", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Spazz" },
+    { categoria: "Corpo/Capelli", nome: "Shampoo", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Shamp" },
+    { categoria: "Corpo/Capelli", nome: "Bagnoschiuma", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Bagno" },
+    { categoria: "Carta/Fazzoletti", nome: "Carta igienica (rotoli)", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=CartaI" },
+    { categoria: "Assorbenti/Protezioni", nome: "Assorbenti igienici", imgUrl: "https://placehold.co/50x50/6D28D9/FFFFFF?text=Prot" },
+
+    /* =========================================================
+       SEZIONE 10: PULIZIA E CURA DELLA CASA 🧼🧹
+       ========================================================= */
+    { categoria: "Lavanderia", nome: "Detersivo lavatrice (liquido)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Lavand" },
+    { categoria: "Lavanderia", nome: "Ammorbidente", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Am morb" },
+    { categoria: "Superfici/Pavimenti", nome: "Detersivo pavimenti", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Pavim" },
+    { categoria: "Superfici/Pavimenti", nome: "Sgrassatore universale", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sgrass" },
+    { categoria: "Cucina", nome: "Detersivo piatti (a mano)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Piatti" },
+    { categoria: "Accessori Pulizia", nome: "Spugne", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Spugne" },
+    { categoria: "Rifiuti", nome: "Sacchetti per immondizia (grandi)", imgUrl: "https://placehold.co/50x50/059669/FFFFFF?text=Sacchet" },
+
+    /* =========================================================
+       SEZIONE 11: PET FOOD (Se applicabile) 🐕🐈
+       ========================================================= */
+    { categoria: "Cibo per Animali", nome: "Crocchette per cane (sacchetto)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Dog" },
+    { categoria: "Cibo per Animali", nome: "Bocconcini per gatto (lattine)", imgUrl: "https://placehold.co/50x50/475569/FFFFFF?text=Cat" },
+
+    /* =========================================================
+       SEZIONE 12: ARTICOLI DI CARTOLERIA/UFFICIO 🖋️
+       ========================================================= */
+    { categoria: "Cartoleria", nome: "Penna (blu/nera)", imgUrl: "https://placehold.co/50x50/F472B6/FFFFFF?text=Penna" },
+    { categoria: "Cartoleria", nome: "Quaderno A4", imgUrl: "https://placehold.co/50x50/F472B6/FFFFFF?text=Quad" },
+
+    /* =========================================================
+       SEZIONE 13: FARMACIA/MEDICINALI (Da banco) 🩹
+       ========================================================= */
+    { categoria: "Salute", nome: "Cerotti", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Cero" },
+    { categoria: "Salute", nome: "Paracetamolo (Tachipirina/Efferalgan)", imgUrl: "https://placehold.co/50x50/374151/FFFFFF?text=Para" },
+
+    /* =========================================================
+       SEZIONE 14: VARIE E CUCINA 🍳
+       ========================================================= */
+    { categoria: "Cucina/Usa e Getta", nome: "Pellicola trasparente", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pelli" },
+    { categoria: "Cucina/Usa e Getta", nome: "Tovaglioli di carta", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Tova" },
+    { categoria: "Varie", nome: "Pile stilo AA", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pile" }
 ];
-
 
 /* -------------- FUNZIONI BASE -------------- */
 

@@ -26,7 +26,7 @@ let shopping = [];
 let actionPending = ''; // Traccia l'azione PDF/Condividi
 
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
-let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl;
+let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl;
 
 
 /* -------------- CATALOGO PRODOTTI (Placeholder) -------------- */
@@ -86,7 +86,7 @@ function initializeApp() {
     } else {
         loginGateEl.style.display = 'flex'; // Centrato via Flexbox nel CSS
         mainAppEl.style.display = 'none';
-        loggedInUserEl.textContent = "Offline";
+        if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
     }
 
     renderCatalog();
@@ -147,7 +147,7 @@ function handleLogout() {
     // Aggiorna la vista
     loginGateEl.style.display = 'flex';
     mainAppEl.style.display = 'none';
-    loggedInUserEl.textContent = "Offline";
+    if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
 }
 
 
@@ -169,7 +169,8 @@ function renderCatalog() {
                 </div>`;
     });
 
-    catalogEl.innerHTML = html;
+    // CORREZIONE: Uso di catalogListEl, l'elemento che contiene il catalogo
+    if(catalogListEl) catalogListEl.innerHTML = html;
 }
 
 function renderShopping() {
@@ -239,19 +240,21 @@ function handleListClick(e) {
     
     const item = shopping[itemIndex];
 
-    switch(action) {
-        case 'increase': item.qty += 1; break;
-        case 'decrease':
-            item.qty -= 1;
-            if (item.qty <= 0) { shopping.splice(itemIndex, 1); }
-            break;
-        case 'delete':
-            if (confirm(`Sei sicuro di voler eliminare "${item.nome}"?`)) { shopping.splice(itemIndex, 1); }
-            break;
-        case 'toggle-done': 
-            // La checkbox inverte lo stato, l'HTML aggiornerà 'item.done'
-            item.done = target.checked; 
-            break;
+    // Se l'elemento cliccato è una checkbox
+    if (target.type === 'checkbox' && action === 'toggle-done') {
+         item.done = target.checked; 
+    } else {
+        // Logica per i bottoni +,-, delete
+        switch(action) {
+            case 'increase': item.qty += 1; break;
+            case 'decrease':
+                item.qty -= 1;
+                if (item.qty <= 0) { shopping.splice(itemIndex, 1); }
+                break;
+            case 'delete':
+                if (confirm(`Sei sicuro di voler eliminare "${item.nome}"?`)) { shopping.splice(itemIndex, 1); }
+                break;
+        }
     }
     
     renderShopping();
@@ -418,14 +421,13 @@ function sharePDF() {
 
 /* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
 
-// NUOVA FUNZIONE: Recupera tutti gli utenti registrati da Firestore
 async function fetchAllRegisteredUsers() {
     try {
         const snapshot = await db.collection(USER_COLLECTION_NAME).get();
         const users = {};
         snapshot.forEach(doc => {
             // Mappa l'ID del documento per un facile lookup
-            users[doc.id] = { ...doc.data(), id: doc.id };
+            users[doc.id] = { ...doc.data(), id: doc.id }; // INCLUSIONE DELL'ID COME PROPRIETÀ
         });
         return users;
     } catch (error) {
@@ -434,7 +436,6 @@ async function fetchAllRegisteredUsers() {
     }
 }
 
-// MODIFICATA: Ascolta gli utenti attivi e li combina con tutti gli utenti per mostrare lo stato
 async function listenToActiveUsers() {
     if (!CURRENT_USER_ID) return; 
 
@@ -509,12 +510,16 @@ function getDOMElements() {
     loginButtonEl = document.getElementById("loginButton");
     inputFirstNameEl = document.getElementById("inputFirstName");
     inputLastNameEl = document.getElementById("inputLastName");
+    // ELEMENTI AGGIUNTI (DEVONO ESISTERE O FALLISCE)
     loggedInUserEl = document.getElementById("loggedInUser");
     logoutButtonEl = document.getElementById("logoutButton");
-    catalogEl = document.getElementById("catalog");
+    
+    // CORREZIONE: Puntamento all'ID corretto
+    catalogListEl = document.getElementById("catalogList");
+    
     shoppingItemsEl = document.getElementById("shoppingItems");
     itemCountEl = document.getElementById("itemCount");
-    addManualInputEl = document.getElementById("addManualInput");
+    addManualInputEl = document.getElementById("manualInput"); // Correzione ID
     addManualBtnEl = document.getElementById("addManualBtn");
     clearBtnEl = document.getElementById("clearBtn");
     saveBtnEl = document.getElementById("saveBtn");
@@ -528,8 +533,8 @@ function getDOMElements() {
     shareBtnEl = document.getElementById("shareBtn");
     
     // Verifica critica per l'interfaccia
-    if (!loginGateEl || !mainAppEl) {
-         console.error("ERRORE CRITICO: Elementi HTML essenziali (loginGate, mainApp) non trovati. Assicurati che index.html non sia vuoto.");
+    if (!loginGateEl || !mainAppEl || !loggedInUserEl || !logoutButtonEl) {
+         console.error("ERRORE CRITICO: Elementi HTML essenziali (loginGate, mainApp, loggedInUser, logoutButton) non trovati. Assicurati che index.html sia completo.");
          document.body.innerHTML = "<h1 style='color:red;'>Errore: Impossibile caricare l'interfaccia. Controlla index.html.</h1>";
          return false;
     }
@@ -538,7 +543,8 @@ function getDOMElements() {
 
 function addAllEventListeners() {
     // EVENTI APP
-    catalogEl.addEventListener("click", (e) => {
+    // L'evento deve essere su catalogListEl che contiene gli elementi
+    catalogListEl.addEventListener("click", (e) => {
         const itemEl = e.target.closest(".catalog-item");
         if (itemEl) {
             const name = itemEl.dataset.name;
@@ -546,11 +552,15 @@ function addAllEventListeners() {
             addItem(name, imgUrl);
         }
     });
+    
+    // Corretto per gestire sia checkbox che bottoni
     shoppingItemsEl.addEventListener("click", handleListClick);
+    
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
-            addItem(name, 'https://placehold.co/40x40/60A5FA/FFFFFF?text=Manuale'); 
+            // Placeholder immagine per l'aggiunta manuale
+            addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale'); 
             addManualInputEl.value = "";
         }
     });
@@ -617,6 +627,7 @@ function addAllEventListeners() {
     inputLastNameEl.addEventListener("keypress", (e) => {
         if (e.key === 'Enter') handleLogin();
     });
+    // LOGOUT AGGIUNTO
     logoutButtonEl.addEventListener("click", handleLogout);
 }
 
@@ -637,6 +648,7 @@ async function checkLoginStatus() {
             handleLogout(); 
         }
     } else {
+        // Se non c'è ID in localStorage, assicurati che la UI di login sia mostrata
         initializeApp();
     }
 }

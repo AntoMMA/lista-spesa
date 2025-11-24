@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const dbRT = firebase.database(); 
 
 // Variabili globali
-// ð MODIFICATO: Inizializza l'ID per tentare il recupero dello stato salvato
+// ðŸš MODIFICATO: Inizializza l'ID per tentare il recupero dello stato salvato
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null; 
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
@@ -208,7 +208,7 @@ async function initializeApp() {
         mainAppEl.style.display = 'grid'; 
         loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
 
-        // ð NUOVO: Imposta l'utente come ONLINE
+        // ðŸš NUOVO: Imposta l'utente come ONLINE
         setActiveUserStatus(true);
         listenToActiveUsers();
         listenToActiveList();
@@ -293,7 +293,7 @@ async function handleLogin() {
         initializeApp();
     } catch (error) {
          console.error("Errore durante il login/registrazione:", error);
-        alert("Errore di connessione o autenticazione. Riprova piÃ¹ tardi."); 
+        alert("Errore di connessione o autenticazione. Riprova più tardi."); 
     }
 }
 
@@ -353,7 +353,7 @@ async function saveManualAddition(name) {
                     lastUsed: firebase.firestore.FieldValue.serverTimestamp()
                 });
             } else {
-                // Se Ã¨ la prima volta che viene aggiunto, crea il documento
+                // Se è la prima volta che viene aggiunto, crea il documento
                 transaction.set(docRef, {
                     name: name,
                     count: 1,
@@ -368,7 +368,7 @@ async function saveManualAddition(name) {
 }
 
 /**
- * Recupera i prodotti piÃ¹ frequenti dal database.
+ * Recupera i prodotti più frequenti dal database.
  * @returns {Array<Object>} Lista di prodotti usati frequentemente.
  */
 async function getFrequentProducts() {
@@ -401,7 +401,7 @@ function renderCatalog(itemsToRender, frequentProducts = []) {
 
     // 1. Aggiungi la sezione "Frequenti" solo se ci sono prodotti
     if (frequentProducts.length > 0) {
-        html += `<h3 class="catalog-category">â­ FREQUENTEMENTE USATI</h3>`;
+        html += `<h3 class="catalog-category">⭐️ FREQUENTEMENTE USATI</h3>`;
         
         frequentProducts.forEach(item => {
              html += `<div class="catalog-item frequent-item" data-name="${item.name}" data-img-url="${item.imgUrl}">
@@ -441,7 +441,7 @@ async function handleSearch() {
     const frequentProducts = await getFrequentProducts(); // Carica i prodotti frequenti
 
     if (searchTerm.length < 2 && searchTerm !== "") {
-        // Se la ricerca Ã¨ breve, mostra il catalogo intero con i frequenti in cima
+        // Se la ricerca è breve, mostra il catalogo intero con i frequenti in cima
         renderCatalog(catalogo, frequentProducts);
         return;
     }
@@ -517,7 +517,7 @@ function addItem(name, imgUrl, isManual = false) {
         });
     }
     
-    // ð NUOVO: Chiama la funzione di auto-apprendimento se Ã¨ un'aggiunta manuale
+    // ðŸš NUOVO: Chiama la funzione di auto-apprendimento se è un'aggiunta manuale
     if (isManual) {
         saveManualAddition(name);
     }
@@ -620,7 +620,7 @@ async function loadLists() {
 
 /**
  * Genera l'HTML stilizzato (mockup) della lista spesa per la conversione PDF.
- * Questo Ã¨ il cuore dello stile Dark Mode.
+ * Questo è il cuore dello stile Dark Mode.
  * @param {Array<Object>} list - La lista della spesa corrente.
  * @param {string} note - La nota utente da includere.
  * @returns {string} L'HTML completo e stilizzato.
@@ -663,7 +663,7 @@ function generateStyledListHTML(list, note) {
                     text-align: center;
                     line-height: 18px;
                     font-size: 9px;
-                ">${item.done ? 'â' : ''}</div>
+                ">${item.done ? '✓' : ''}</div>
                 <div style="
                     width: 35px; 
                     height: 35px; 
@@ -726,7 +726,7 @@ function downloadStyledPDF() {
         
         let heightLeft = imgHeight; // Altezza totale da stampare
         
-        // Crea il documento PDF. L'altezza iniziale Ã¨ l'altezza standard A4 o l'altezza del contenuto (la maggiore)
+        // Crea il documento PDF. L'altezza iniziale è l'altezza standard A4 o l'altezza del contenuto (la maggiore)
         const doc = new jsPDF('p', 'mm', [pdfWidth, Math.max(pdfHeight, imgHeight + (2 * margin))]); 
         
         let position = 0;
@@ -772,11 +772,11 @@ function sharePDF() {
         navigator.share(shareData)
             .catch((error) => {
                 console.error('Errore durante la condivisione web:', error);
-                alert("Condivisione fallita. VerrÃ  scaricato il PDF stilizzato.");
+                alert("Condivisione fallita. Verrà scaricato il PDF stilizzato.");
                 downloadStyledPDF(); // Ricade nel download stilizzato
             });
     } else {
-        alert("Il tuo browser non supporta l'API di condivisione nativa. VerrÃ  scaricato il PDF stilizzato.");
+        alert("Il tuo browser non supporta l'API di condivisione nativa. Verrà scaricato il PDF stilizzato.");
         downloadStyledPDF(); // Ricade nel download stilizzato
     }
     
@@ -805,7 +805,7 @@ async function fetchAllRegisteredUsers() {
 
 /**
  * Ascolta i cambiamenti di stato (online/offline) degli utenti.
- * ð MODIFICATO: Ora combina i dati di tutti gli utenti registrati con il loro stato in 'user_status'.
+ * ðŸš MODIFICATO: Ora combina i dati di tutti gli utenti registrati con il loro stato in 'user_status'.
  */
 async function listenToActiveUsers() {
     if (!CURRENT_USER_ID) return; 
@@ -849,7 +849,7 @@ async function listenToActiveUsers() {
         
     }, (error) => {
         console.error("Errore Realtime DB (utenti):", error);
-        activeUsersListEl.innerHTML = `<li class="error-msg">â Errore di connessione: ${error.code}</li>`;
+        activeUsersListEl.innerHTML = `<li class="error-msg">❌ Errore di connessione: ${error.code}</li>`;
     });
 }
 
@@ -921,7 +921,7 @@ function addAllEventListeners() {
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
-            // ð NUOVO: Passiamo true per indicare che Ã¨ un'aggiunta manuale
+            // ðŸš NUOVO: Passiamo true per indicare che è un'aggiunta manuale
             addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale', true); 
             addManualInputEl.value = "";
         }
@@ -965,7 +965,7 @@ function addAllEventListeners() {
         if (!action || !id) return;
     
         if (action === "load") {
-            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrÃ  sovrascritta. Continuare?")) return;
+            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
             try {
                 const doc = await db.collection("liste_salvate").doc(id).get();
                 if (doc.exists) {
@@ -991,7 +991,7 @@ function addAllEventListeners() {
     });
     logoutButtonEl.addEventListener("click", handleLogout);
 
-    // ð NUOVO: Listener per la chiusura della pagina
+    // ðŸš NUOVO: Listener per la chiusura della pagina
     window.addEventListener('beforeunload', handleBeforeUnload);
 }
 

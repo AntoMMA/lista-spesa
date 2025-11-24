@@ -16,6 +16,7 @@ const dbRT = firebase.database();
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
+let pdfNote = ""; // Variabile per la nota del PDF
 
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -25,511 +26,342 @@ function generateUUID() {
 }
 
 
-async function saveCatalogFirestore() {
-  try {
-    // Il catalogo deve essere salvato, ma prima puliamo l'imgUrl per i nuovi elementi manuali
-    const cleanedCatalogo = catalogo.map(item => {
-        const { imgUrl, ...rest } = item;
-        // Non salviamo l'imgUrl nel caso di aggiunte manuali (così la prossima volta non avranno un URL casuale)
-        return imgUrl ? item : rest;
-    });
-    
-    const sortedCatalogo = cleanedCatalogo.sort((a, b) => a.nome.localeCompare(b.nome));
-    await db.collection("catalogo").doc("prodotti").set({ items: sortedCatalogo });
-    console.log("Catalogo aggiornato su Firestore");
-  } catch (err) {
-    console.error("Errore salvataggio catalogo:", err);
-  }
-}
+/* -------------- VARIABILI GLOBALI E CATTURA ELEMENTI DOM -------------- */
+let shopping = []; // La lista spesa attiva
 
+// Elementi di interfaccia utente
+const loginGateEl = document.getElementById("loginGate");
+const mainAppEl = document.getElementById("mainApp");
+const loginButtonEl = document.getElementById("loginButton");
+const inputFirstNameEl = document.getElementById("inputFirstName");
+const inputLastNameEl = document.getElementById("inputLastName");
+const loggedInUserEl = document.getElementById("loggedInUser");
+const logoutButtonEl = document.getElementById("logoutButton");
+const catalogEl = document.getElementById("catalog");
+const shoppingItemsEl = document.getElementById("shoppingItems");
+const itemCountEl = document.getElementById("itemCount");
+const addManualInputEl = document.getElementById("addManualInput");
+const addManualBtnEl = document.getElementById("addManualBtn");
+const clearBtnEl = document.getElementById("clearBtn");
+const saveBtnEl = document.getElementById("saveBtn");
+const loadBtnEl = document.getElementById("loadBtn");
+const savedListsEl = document.getElementById("savedLists");
+const activeUsersListEl = document.getElementById("activeUsersList");
+const pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
+const pdfNoteInputEl = document.getElementById("pdfNoteInput");
+const pdfNoteConfirmBtnEl = document.getElementById("pdfNoteConfirmBtn");
+const downloadBtnEl = document.getElementById("downloadBtn");
+const shareBtnEl = document.getElementById("shareBtn");
 
-/* -------------- CATALOGO PREIMPOSTATO AMPLIATO E CON IMMAGINI (Placeholder) -------------- */
-// ⚠️ SOSTITUISCI QUESTI URL CON I LINK ALLE TUE IMMAGINI REALI! 
-// Ho usato 'https://picsum.photos/seed/[parola chiave]/50/50' per immagini realistiche di esempio.
+/* -------------- CATALOGO PREIMPOSTATO AMPLIATO E CON IMMAGINI (Temporanee/Placeholder) -------------- */
+// *** QUESTE IMMAGINI SONO TEMPORANEE. DOVRAI SOSTITUIRLE CON I TUOI URL STABILI (es. da Firebase Storage) ***
 const catalogo = [
-  // --- FRUTTA E VERDURA ---
-  { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://picsum.photos/seed/mela/50/50" },
-  { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://picsum.photos/seed/banana/50/50" },
-  { categoria: "Frutta fresca", nome: "Arance da tavola", imgUrl: "https://picsum.photos/seed/arancia/50/50" },
-  { categoria: "Frutta fresca", nome: "Uva bianca", imgUrl: "https://picsum.photos/seed/uva/50/50" },
-  { categoria: "Frutta fresca", nome: "Fragole", imgUrl: "https://picsum.photos/seed/fragola/50/50" },
-  { categoria: "Frutta fresca", nome: "Limoni", imgUrl: "https://picsum.photos/seed/limone/50/50" },
-  { categoria: "Frutta fresca", nome: "Kiwi", imgUrl: "https://picsum.photos/seed/kiwi/50/50" },
+    // --- FRUTTA E VERDURA ---
+    { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
+    { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
+    { categoria: "Frutta fresca", nome: "Arance da tavola", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
+    { categoria: "Frutta fresca", nome: "Uva bianca", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
+    { categoria: "Verdura", nome: "Insalata iceberg", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Verdura" },
+    { categoria: "Verdura", nome: "Pomodori ramati", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Verdura" },
+    { categoria: "Verdura", nome: "Patate", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Verdura" },
+    { categoria: "Erbe aromatiche", nome: "Basilico fresco", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Erbe" },
+    
+    // --- CARNE E PESCE ---
+    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Carne" },
+    { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Carne" },
+    { categoria: "Pesce fresco", nome: "Salmone", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Pesce" },
+    { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Pesce" },
+    
+    // --- LATTICINI E UOVA ---
+    { categoria: "Latte e derivati", nome: "Latte intero", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Latte" },
+    { categoria: "Formaggi freschi", nome: "Mozzarella", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Formaggio" },
+    { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Formaggio" },
+    { categoria: "Uova", nome: "Uova grandi (confezione da 6)", imgUrl: "https://placehold.co/50x50/FBBF24/000000?text=Uova" },
 
-  { categoria: "Verdura a foglia", nome: "Insalata iceberg", imgUrl: "https://picsum.photos/seed/insalata/50/50" },
-  { categoria: "Verdura a foglia", nome: "Spinaci freschi", imgUrl: "https://picsum.photos/seed/spinaci/50/50" },
-  { categoria: "Verdura a foglia", nome: "Rucola", imgUrl: "https://picsum.photos/seed/rucola/50/50" },
-  { categoria: "Verdura base", nome: "Pomodori ramati", imgUrl: "https://picsum.photos/seed/pomodori/50/50" },
-  { categoria: "Verdura base", nome: "Zucchine", imgUrl: "https://picsum.photos/seed/zucchine/50/50" },
-  { categoria: "Verdura base", nome: "Carote", imgUrl: "https://picsum.photos/seed/carote/50/50" },
-  { categoria: "Verdura base", nome: "Cetrioli", imgUrl: "https://picsum.photos/seed/cetrioli/50/50" },
-  { categoria: "Verdura base", nome: "Peperoni gialli", imgUrl: "https://picsum.photos/seed/peperoni/50/50" },
-  { categoria: "Verdura base", nome: "Cipolle dorate", imgUrl: "https://picsum.photos/seed/cipolle/50/50" },
-  { categoria: "Verdura base", nome: "Aglio", imgUrl: "https://picsum.photos/seed/aglio/50/50" },
-  { categoria: "Verdura base", nome: "Patate a pasta gialla", imgUrl: "https://picsum.photos/seed/patate/50/50" },
-  { categoria: "Verdura base", nome: "Melanzane", imgUrl: "https://picsum.photos/seed/melanzane/50/50" },
+    // --- PASTA, PANE E CEREALI ---
+    { categoria: "Pasta secca", nome: "Spaghetti", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pasta" },
+    { categoria: "Pane", nome: "Pane fresco (tipo casereccio)", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Pane" },
+    { categoria: "Colazione", nome: "Cereali per la colazione", imgUrl: "https://placehold.co/50x50/9333EA/FFFFFF?text=Cereali" },
 
-  // --- PANETTERIA E CEREALI ---
-  { categoria: "Pane fresco", nome: "Pane casereccio", imgUrl: "https://picsum.photos/seed/pane/50/50" },
-  { categoria: "Pane fresco", nome: "Baguette", imgUrl: "https://picsum.photos/seed/baguette/50/50" },
-  { categoria: "Pane fresco", nome: "Fette biscottate integrali", imgUrl: "https://picsum.photos/seed/fette/50/50" },
-  { categoria: "Cereali colazione", nome: "Fiocchi d'avena", imgUrl: "https://picsum.photos/seed/avena/50/50" },
-  { categoria: "Cereali colazione", nome: "Muesli", imgUrl: "https://picsum.photos/seed/muesli/50/50" },
-  { categoria: "Prodotti da forno", nome: "Grissini", imgUrl: "https://picsum.photos/seed/grissini/50/50" },
-  { categoria: "Prodotti da forno", nome: "Crackers salati", imgUrl: "https://picsum.photos/seed/crackers/50/50" },
+    // --- SURGELATI ---
+    { categoria: "Verdure surgelate", nome: "Spinaci a cubetti", imgUrl: "https://placehold.co/50x50/06B6D4/FFFFFF?text=Surgelato" },
+    { categoria: "Pasti pronti", nome: "Pizza surgelata", imgUrl: "https://placehold.co/50x50/06B6D4/FFFFFF?text=Surgelato" },
 
-  // --- LATTICINI E UOVA ---
-  { categoria: "Latte e Panna", nome: "Latte intero UHT", imgUrl: "https://picsum.photos/seed/latte/50/50" },
-  { categoria: "Latte e Panna", nome: "Latte parzialmente scremato", imgUrl: "https://picsum.photos/seed/latte-scremato/50/50" },
-  { categoria: "Latte e Panna", nome: "Panna fresca", imgUrl: "https://picsum.photos/seed/panna/50/50" },
-  { categoria: "Latte e Panna", nome: "Panna da cucina", imgUrl: "https://picsum.photos/seed/panna-cucina/50/50" },
-  { categoria: "Yogurt", nome: "Yogurt bianco naturale", imgUrl: "https://picsum.photos/seed/yogurt/50/50" },
-  { categoria: "Yogurt", nome: "Yogurt alla frutta", imgUrl: "https://picsum.photos/seed/yogurt-frutta/50/50" },
-  { categoria: "Uova", nome: "Uova fresche grandi (conf. 6)", imgUrl: "https://picsum.photos/seed/uova/50/50" },
-  
-  // --- FORMAGGI E BURRO ---
-  { categoria: "Formaggi freschi", nome: "Mozzarella di bufala", imgUrl: "https://picsum.photos/seed/mozzarella/50/50" },
-  { categoria: "Formaggi freschi", nome: "Ricotta fresca", imgUrl: "https://picsum.photos/seed/ricotta/50/50" },
-  { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato", imgUrl: "https://picsum.photos/seed/parmigiano/50/50" },
-  { categoria: "Formaggi stagionati", nome: "Emmentaler a fette", imgUrl: "https://picsum.photos/seed/emmentaler/50/50" },
-  { categoria: "Formaggi stagionati", nome: "Gorgonzola piccante", imgUrl: "https://picsum.photos/seed/gorgonzola/50/50" },
-  { categoria: "Burro e Margarina", nome: "Burro tradizionale", imgUrl: "https://picsum.photos/seed/burro/50/50" },
-  { categoria: "Burro e Margarina", nome: "Margarina vegetale", imgUrl: "https://picsum.photos/seed/margarina/50/50" },
-  
-  // --- CARNE E PESCE ---
-  { categoria: "Carne bovina", nome: "Fettine di Manzo", imgUrl: "https://picsum.photos/seed/manzo/50/50" },
-  { categoria: "Carne bovina", nome: "Carne macinata scelta", imgUrl: "https://picsum.photos/seed/macinato/50/50" },
-  { categoria: "Carne suina", nome: "Salsiccia fresca", imgUrl: "https://picsum.photos/seed/salsiccia/50/50" },
-  { categoria: "Carne suina", nome: "Costine di maiale", imgUrl: "https://picsum.photos/seed/costine/50/50" },
-  { categoria: "Pollame", nome: "Petto di pollo a fette", imgUrl: "https://picsum.photos/seed/pollo/50/50" },
-  { categoria: "Pollame", nome: "Fusi di tacchino", imgUrl: "https://picsum.photos/seed/tacchino/50/50" },
-  { categoria: "Pesce fresco", nome: "Filetti di merluzzo", imgUrl: "https://picsum.photos/seed/merluzzo/50/50" },
-  { categoria: "Pesce fresco", nome: "Salmone affumicato (vaschetta)", imgUrl: "https://picsum.photos/seed/salmone/50/50" },
-  
-  // --- SALUMI E AFFETTATI ---
-  { categoria: "Salumi", nome: "Prosciutto cotto a fette", imgUrl: "https://picsum.photos/seed/prosciutto-cotto/50/50" },
-  { categoria: "Salumi", nome: "Prosciutto crudo", imgUrl: "https://picsum.photos/seed/prosciutto-crudo/50/50" },
-  { categoria: "Salumi", nome: "Salame milano", imgUrl: "https://picsum.photos/seed/salame/50/50" },
-  { categoria: "Salumi", nome: "Mortadella", imgUrl: "https://picsum.photos/seed/mortadella/50/50" },
-  
-  // --- SURGELATI ---
-  { categoria: "Surgelati: Verdure", nome: "Piselli fini surgelati", imgUrl: "https://picsum.photos/seed/piselli-surgelati/50/50" },
-  { categoria: "Surgelati: Verdure", nome: "Spinaci cubetti surgelati", imgUrl: "https://picsum.photos/seed/spinaci-surgelati/50/50" },
-  { categoria: "Surgelati: Pesce", nome: "Bastoncini di pesce", imgUrl: "https://picsum.photos/seed/bastoncini/50/50" },
-  { categoria: "Surgelati: Pasti Pronti", nome: "Pizza margherita surgelata", imgUrl: "https://picsum.photos/seed/pizza-surgelata/50/50" },
-  { categoria: "Surgelati: Dessert", nome: "Gelato alla vaniglia", imgUrl: "https://picsum.photos/seed/gelato/50/50" },
-  
-  // --- PASTA, RISO E LEGUMI SECCHI ---
-  { categoria: "Pasta secca", nome: "Spaghetti n°5", imgUrl: "https://picsum.photos/seed/spaghetti/50/50" },
-  { categoria: "Pasta secca", nome: "Penne rigate", imgUrl: "https://picsum.photos/seed/penne/50/50" },
-  { categoria: "Riso", nome: "Riso Carnaroli", imgUrl: "https://picsum.photos/seed/riso/50/50" },
-  { categoria: "Legumi secchi", nome: "Lenticchie secche", imgUrl: "https://picsum.photos/seed/lenticchie/50/50" },
-  { categoria: "Legumi secchi", nome: "Fagioli secchi cannellini", imgUrl: "https://picsum.photos/seed/fagioli/50/50" },
-  
-  // --- CONSERVE, SALSE E OLII ---
-  { categoria: "Conserve pomodoro", nome: "Passata di pomodoro", imgUrl: "https://picsum.photos/seed/passata/50/50" },
-  { categoria: "Conserve pomodoro", nome: "Pelati in scatola", imgUrl: "https://picsum.photos/seed/pelati/50/50" },
-  { categoria: "Conserve ittiche", nome: "Tonno sott'olio (vasetto)", imgUrl: "https://picsum.photos/seed/tonno/50/50" },
-  { categoria: "Conserve ittiche", nome: "Sgombro in scatola", imgUrl: "https://picsum.photos/seed/sgombro/50/50" },
-  { categoria: "Olii e Condimenti", nome: "Olio extra vergine d'oliva", imgUrl: "https://picsum.photos/seed/olio/50/50" },
-  { categoria: "Olii e Condimenti", nome: "Aceto di vino bianco", imgUrl: "https://picsum.photos/seed/aceto/50/50" },
-  { categoria: "Salse", nome: "Maionese in tubetto", imgUrl: "https://picsum.photos/seed/maionese/50/50" },
-  { categoria: "Salse", nome: "Ketchup", imgUrl: "https://picsum.photos/seed/ketchup/50/50" },
-  { categoria: "Salse", nome: "Senape", imgUrl: "https://picsum.photos/seed/senape/50/50" },
-  { categoria: "Cibi pronti", nome: "Brodo vegetale in dado", imgUrl: "https://picsum.photos/seed/dado/50/50" },
-  
-  // --- SPEZIE, SALE E ZUCCHERO ---
-  { categoria: "Spezie e Aromi", nome: "Pepe nero macinato", imgUrl: "https://picsum.photos/seed/pepe/50/50" },
-  { categoria: "Spezie e Aromi", nome: "Origano secco", imgUrl: "https://picsum.photos/seed/origano/50/50" },
-  { categoria: "Sale e Zucchero", nome: "Sale fino iodato", imgUrl: "https://picsum.photos/seed/sale/50/50" },
-  { categoria: "Sale e Zucchero", nome: "Zucchero semolato", imgUrl: "https://picsum.photos/seed/zucchero/50/50" },
-  { categoria: "Sale e Zucchero", nome: "Miele di acacia", imgUrl: "https://picsum.photos/seed/miele/50/50" },
-  
-  // --- BEVANDE ---
-  { categoria: "Acqua", nome: "Acqua naturale (bottiglie da 1.5L)", imgUrl: "https://picsum.photos/seed/acqua/50/50" },
-  { categoria: "Acqua", nome: "Acqua frizzante (bottiglie da 1.5L)", imgUrl: "https://picsum.photos/seed/acqua-frizzante/50/50" },
-  { categoria: "Soft Drinks", nome: "Coca Cola Zero", imgUrl: "https://picsum.photos/seed/coca-cola/50/50" },
-  { categoria: "Soft Drinks", nome: "Gazzosa", imgUrl: "https://picsum.photos/seed/gazzosa/50/50" },
-  { categoria: "Succhi", nome: "Succo d'arancia 100%", imgUrl: "https://picsum.photos/seed/succo/50/50" },
-  { categoria: "Succhi", nome: "Thè al limone", imgUrl: "https://picsum.photos/seed/the/50/50" },
-  { categoria: "Vini", nome: "Vino rosso Chianti", imgUrl: "https://picsum.photos/seed/vino-rosso/50/50" },
-  { categoria: "Vini", nome: "Vino bianco frizzante", imgUrl: "https://picsum.photos/seed/vino-bianco/50/50" },
-  { categoria: "Birre", nome: "Birra bionda lager (conf. 6)", imgUrl: "https://picsum.photos/seed/birra/50/50" },
-  
-  // --- DROGHERIA E PULIZIA ---
-  { categoria: "Igiene personale", nome: "Sapone liquido mani", imgUrl: "https://picsum.photos/seed/sapone/50/50" },
-  { categoria: "Igiene personale", nome: "Shampoo neutro", imgUrl: "https://picsum.photos/seed/shampoo/50/50" },
-  { categoria: "Igiene personale", nome: "Dentifricio al fluoro", imgUrl: "https://picsum.photos/seed/dentifricio/50/50" },
-  { categoria: "Carta e Monouso", nome: "Carta igienica (rotoli)", imgUrl: "https://picsum.photos/seed/carta-igienica/50/50" },
-  { categoria: "Carta e Monouso", nome: "Tovaglioli di carta", imgUrl: "https://picsum.photos/seed/tovaglioli/50/50" },
-  { categoria: "Pulizia casa", nome: "Detersivo pavimenti", imgUrl: "https://picsum.photos/seed/detersivo/50/50" },
-  { categoria: "Pulizia casa", nome: "Detersivo per piatti a mano", imgUrl: "https://picsum.photos/seed/piatti/50/50" },
-  { categoria: "Pulizia casa", nome: "Candeggina", imgUrl: "https://picsum.photos/seed/candeggina/50/50" },
-  { categoria: "Bucato", nome: "Detersivo lavatrice liquido", imgUrl: "https://picsum.photos/seed/lavatrice/50/50" },
-  { categoria: "Bucato", nome: "Ammorbidente concentrato", imgUrl: "https://picsum.photos/seed/ammorbidente/50/50" },
-  
-  // --- PET FOOD E VARIE ---
-  { categoria: "Animali domestici", nome: "Crocchette per cani adulti", imgUrl: "https://picsum.photos/seed/crocchette/50/50" },
-  { categoria: "Animali domestici", nome: "Cibo umido per gatti", imgUrl: "https://picsum.photos/seed/cibo-gatti/50/50" },
-  { categoria: "Altro", nome: "Sacchetti per immondizia grandi", imgUrl: "https://picsum.photos/seed/sacchetti/50/50" },
-  { categoria: "Altro", nome: "Pile stilo AA", imgUrl: "https://picsum.photos/seed/pile/50/50" },
+    // --- BEVANDE E ALCOLICI ---
+    { categoria: "Acqua", nome: "Acqua naturale (6x1.5L)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Bevande" },
+    { categoria: "Bevande zuccherate", nome: "Cola", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Bevande" },
+    { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Vino" },
+    
+    // --- IGIENE E CASA ---
+    { categoria: "Igiene personale", nome: "Dentifricio", imgUrl: "https://placehold.co/50x50/F97316/FFFFFF?text=Igiene" },
+    { categoria: "Pulizia casa", nome: "Detersivo pavimenti", imgUrl: "https://placehold.co/50x50/F97316/FFFFFF?text=Casa" },
 ];
 /* -------------------------------------------------------- */
 
 
-/* -------------- ELEMENTI DOM (invariato) -------------- */
-const catalogList = document.getElementById("catalogList");
-const searchInput = document.getElementById("searchInput");
-const manualInput = document.getElementById("manualInput");
-const addManualBtn = document.getElementById("addManualBtn");
-const shoppingItemsEl = document.getElementById("shoppingItems");
-const itemCountEl = document.getElementById("itemCount");
-const saveBtn = document.getElementById("saveBtn");
-const loadBtn = document.getElementById("loadBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const shareBtn = document.getElementById("shareBtn");
-const clearBtn = document.getElementById("clearBtn");
-const savedListsEl = document.getElementById("savedLists");
-const pdfNoteContainer = document.getElementById("pdfNoteContainer");
-const pdfNoteInput = document.getElementById("pdfNoteInput");
-const pdfNoteConfirmBtn = document.getElementById("pdfNoteConfirmBtn");
-const activeUsersListEl = document.getElementById("activeUsersList");
+/* -------------- FUNZIONI UTENTE E AUTENTICAZIONE -------------- */
 
-const loginGateEl = document.getElementById("loginGate");
-const mainAppEl = document.getElementById("mainApp"); 
-const inputFirstNameEl = document.getElementById("inputFirstName");
-const inputLastNameEl = document.getElementById("inputLastName");
-const loginButtonEl = document.getElementById("loginButton");
-
-
-let pdfNote = ""; 
-
-/* -------------- STATO GLOBALE (invariato) -------------- */
-let shopping = []; 
-let usersCache = {}; 
-let presenceCache = {}; 
-
-function showPDFNoteInput(callback) {
-  // ... (funzione showPDFNoteInput - invariata)
-  pdfNoteContainer.style.display = 'block';
-  // ...
-  pdfNoteConfirmBtn.onclick = () => {
-    pdfNote = pdfNoteInput.value.trim();
-    pdfNoteContainer.style.display = 'none';
-    callback();
-  };
-}
-
-function persistLocal() {
-  localStorage.setItem("shoppingList", JSON.stringify(shopping));
-}
-
-function restoreLocal() {
-  const localShopping = localStorage.getItem("shoppingList");
-  if (localShopping) {
-    shopping = JSON.parse(localShopping);
-  }
-}
-
-/* -------------- FUNZIONI UI AGGIORNATE PER LE IMMAGINI -------------- */
-
-// AGGIORNATA: Recupera l'URL dell'immagine e la mostra nella lista
-function renderShopping() {
-  shoppingItemsEl.innerHTML = "";
-
-  // Mappa per recuperare velocemente l'URL dell'immagine dal nome del prodotto
-  const productMap = catalogo.reduce((acc, p) => {
-    acc[p.nome.toLowerCase()] = p.imgUrl;
-    return acc;
-  }, {});
-
-  shopping.forEach((item, index) => {
-    const itemImgUrl = productMap[item.nome.toLowerCase()] || 'https://via.placeholder.com/50/888/FFFFFF?text=?';
-    
-    const li = document.createElement("li");
-    li.classList.toggle("done", item.done);
-    li.dataset.index = index;
-
-    li.innerHTML = `
-      <div class="left">
-        <input type="checkbox" ${item.done ? "checked" : ""} data-action="toggle" />
-        <img src="${itemImgUrl}" alt="${item.nome}" class="product-photo-list">
-        <div>
-            <span class="name">${item.nome}</span>
-            <span class="qty">${item.qty > 1 ? `Quantità: ${item.qty}` : ""}</span>
-        </div>
-      </div>
-      <div class="right">
-        <button data-action="decrease" class="button">-</button>
-        <button data-action="increase" class="button">+</button>
-        <button data-action="delete" class="button danger">X</button>
-      </div>
-    `;
-    shoppingItemsEl.appendChild(li);
-  });
-  updateCount();
-  persistLocal();
-}
-
-// AGGIORNATA: Aggiunge l'immagine al catalogo
-function renderCatalog(items) {
-  catalogList.innerHTML = "";
-  let currentCategory = "";
-
-  // Raggruppa gli elementi per categoria
-  const groups = items.reduce((acc, item) => {
-    if (!acc[item.categoria]) acc[item.categoria] = [];
-    acc[item.categoria].push(item);
-    return acc;
-  }, {});
-  
-  const sortedCategories = Object.keys(groups).sort();
-  
-  sortedCategories.forEach(cat => {
-    const categoryEl = document.createElement("div");
-    categoryEl.className = "catalog-category";
-    categoryEl.textContent = cat;
-    catalogList.appendChild(categoryEl);
-
-    // Ordina i prodotti all'interno della categoria
-    groups[cat].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(item => {
-      const itemEl = document.createElement("div");
-      itemEl.className = "catalog-item";
-      
-      const itemImgUrl = item.imgUrl || 'https://via.placeholder.com/50/888/FFFFFF?text=PROD';
-      
-      itemEl.innerHTML = `
-        <img src="${itemImgUrl}" alt="${item.nome}" class="product-photo-catalog">
-        <div class="meta">
-          <strong>${item.nome}</strong>
-        </div>
-        `;
-      
-      itemEl.addEventListener("click", () => addItemToShopping(item.nome));
-      catalogList.appendChild(itemEl);
-    });
-  });
-}
-
-function addItemToShopping(name) {
-  const existingItem = shopping.find(i => i.nome === name && !i.done);
-  if (existingItem) {
-    existingItem.qty += 1;
-  } else {
-    shopping.unshift({ nome: name, qty: 1, done: false });
-  }
-  renderShopping();
-}
-
-function updateCount() {
-  const activeCount = shopping.filter(i => !i.done).length;
-  itemCountEl.textContent = activeCount;
-}
-
-
-/* -------------- FUNZIONI UTENTI ATTIVI E PRESENZA (invariato) -------------- */
-function renderUsers() {
-    activeUsersListEl.innerHTML = "";
-    
-    const allUserIDs = Object.keys(usersCache).filter(id => usersCache[id]?.firstName);
-    
-    const sortedUserIDs = allUserIDs.sort((a, b) => {
-        const statusA = presenceCache[a]?.state === 'online' ? 0 : 1;
-        const statusB = presenceCache[b]?.state === 'online' ? 0 : 1;
-        
-        if (statusA !== statusB) return statusA - statusB; 
-        
-        const nameA = `${usersCache[a].firstName} ${usersCache[a].lastName}`;
-        const nameB = `${usersCache[b].firstName} ${usersCache[b].lastName}`;
-        return nameA.localeCompare(nameB);
-    });
-    
-    sortedUserIDs.forEach(userID => {
-        const user = usersCache[userID];
-        const status = presenceCache[userID] || { state: 'offline' };
-        
-        const li = document.createElement("li");
-        
-        const dotClass = `status-${status.state}`;
-        const fullName = `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`;
-        
-        li.innerHTML = `
-            <span class="status-dot ${dotClass}" title="${status.state === 'online' ? 'Online' : 'Offline'}"></span>
-            <span>${fullName} ${userID === CURRENT_USER_ID ? '(Tu)' : ''}</span>
-        `;
-        
-        activeUsersListEl.appendChild(li);
-    });
-    
-    if (sortedUserIDs.length === 0) {
-        activeUsersListEl.innerHTML = "<li style='color: var(--muted-color);'>Nessun utente attivo.</li>";
-    }
-}
-
-async function saveUserData(userID, firstName, lastName) {
-    try {
-        await db.collection(USER_COLLECTION_NAME).doc(userID).set({
-            firstName: firstName,
-            lastName: lastName,
-            lastLogin: firebase.firestore.FieldValue.serverTimestamp()
-        }, { merge: true });
-        console.log("Dati utente salvati in Firestore:", { userID, firstName, lastName });
-    } catch (err) {
-        console.error("Errore salvataggio dati utente in Firestore:", err);
-    }
-}
-
-function setupPresence() {
-    if (!CURRENT_USER_ID) return;
-
-    const userRef = dbRT.ref('presence/' + CURRENT_USER_ID);
-
-    userRef.onDisconnect().set({
-        state: 'offline',
-        last_seen: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => {
-        userRef.set({
-            state: 'online',
-            last_seen: firebase.database.ServerValue.TIMESTAMP
-        });
-    }).catch(err => {
-        console.error("Errore setupPresence:", err);
-    });
-
-    window.addEventListener('beforeunload', () => {
-        userRef.set({ state: 'offline', last_seen: Date.now() });
-    });
-}
-
-
-async function loadAndWatchUsers() {
-    db.collection(USER_COLLECTION_NAME).onSnapshot((snapshot) => {
-        snapshot.forEach(doc => {
-            usersCache[doc.id] = doc.data();
-        });
-        renderUsers(); 
-    }, (error) => {
-        console.error("Errore nell'ascolto degli utenti da Firestore:", error);
-    });
-
-    dbRT.ref('presence').on('value', (snapshot) => {
-        const newPresenceData = snapshot.val() || {};
-        presenceCache = newPresenceData;
-        renderUsers();
-    }, (error) => {
-        console.error("Errore nell'ascolto della presenza RTDB:", error);
-    });
-}
-
-
-/* -------------- GESTIONE ACCESSO (invariato) -------------- */
-function handleLogin() {
+async function handleLogin() {
     const firstName = inputFirstNameEl.value.trim();
     const lastName = inputLastNameEl.value.trim();
 
-    if (!firstName) {
-        alert("Inserisci il tuo nome.");
+    if (!firstName || !lastName) {
+        alert("Inserisci Nome e Cognome per accedere.");
         return;
     }
-    
-    if (!CURRENT_USER_ID) {
-        CURRENT_USER_ID = generateUUID();
+
+    // Prova a trovare l'utente esistente (per persistenza)
+    const userRef = db.collection(USER_COLLECTION_NAME).where("firstName", "==", firstName).where("lastName", "==", lastName).limit(1);
+    const snapshot = await userRef.get();
+
+    if (!snapshot.empty) {
+        // Utente esistente
+        const userData = snapshot.docs[0].data();
+        CURRENT_USER_ID = snapshot.docs[0].id;
+        CURRENT_USER_DATA = { firstName, lastName };
         localStorage.setItem("user_unique_id", CURRENT_USER_ID);
+        
+        // Aggiorna lo stato di login (es. 'online') nel database Realtime
+        dbRT.ref('active_users/' + CURRENT_USER_ID).set({
+            firstName: firstName,
+            lastName: lastName,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        });
+
+    } else {
+        // Nuovo utente: registra e genera un nuovo ID
+        CURRENT_USER_ID = generateUUID();
+        CURRENT_USER_DATA = { firstName, lastName };
+        localStorage.setItem("user_unique_id", CURRENT_USER_ID);
+
+        try {
+            await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).set(CURRENT_USER_DATA);
+
+            // Aggiungi al database Realtime come utente attivo
+            dbRT.ref('active_users/' + CURRENT_USER_ID).set({
+                firstName: firstName,
+                lastName: lastName,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+
+        } catch (error) {
+            console.error("Errore durante la registrazione:", error);
+            alert("Errore durante la registrazione dell'utente.");
+            return; 
+        }
+    }
+
+    initializeApp();
+}
+
+function handleLogout() {
+    if (CURRENT_USER_ID) {
+        // Rimuovi l'utente da "active_users"
+        dbRT.ref('active_users/' + CURRENT_USER_ID).remove();
     }
     
-    saveUserData(CURRENT_USER_ID, firstName, lastName);
-
-    loginGateEl.style.display = 'none';
-    mainAppEl.style.display = 'block';
-
-    setupPresence();
+    CURRENT_USER_ID = null;
+    CURRENT_USER_DATA = { firstName: "", lastName: "" };
+    localStorage.removeItem("user_unique_id");
+    
+    // Ritorna alla schermata di login
+    loginGateEl.style.display = 'flex';
+    mainAppEl.style.display = 'none';
+    loggedInUserEl.textContent = "Offline";
 }
 
-function checkLocalLogin() {
+
+/* -------------- FUNZIONI LISTA SPESA (RENDER e LOGICA) -------------- */
+
+function renderCatalog() {
+    let html = '';
+    let currentCategory = '';
+
+    catalogo.forEach(item => {
+        if (item.categoria !== currentCategory) {
+            html += `<h3>${item.categoria}</h3>`;
+            currentCategory = item.categoria;
+        }
+        // Il data-img-url è fondamentale per aggiungere l'immagine all'elemento lista
+        html += `<div class="catalog-item" data-name="${item.nome}" data-img-url="${item.imgUrl}">
+                    <img src="${item.imgUrl}" alt="${item.nome}" class="product-photo">
+                    <span>${item.nome}</span>
+                </div>`;
+    });
+
+    catalogEl.innerHTML = html;
+}
+
+function renderShopping() {
+    // Ordina: elementi da fare prima, poi elementi fatti
+    const sortedShopping = [...shopping].sort((a, b) => {
+        if (a.done === b.done) return 0;
+        return a.done ? 1 : -1;
+    });
+
+    shoppingItemsEl.innerHTML = sortedShopping.map((item, index) => {
+        const itemClass = item.done ? 'done' : '';
+        
+        return `<li class="${itemClass}" data-index="${index}" data-name="${item.nome}">
+                    <div class="left">
+                        <input type="checkbox" ${item.done ? 'checked' : ''} data-action="toggle-done">
+                        <img src="${item.imgUrl || 'https://placehold.co/40x40'}" alt="${item.nome}" class="product-photo-list">
+                        <span class="name">${item.nome}</span>
+                        <span class="qty">(x ${item.qty})</span>
+                    </div>
+                    <div class="right">
+                        <button class="qty-btn" data-action="decrease">-</button>
+                        <button class="qty-btn" data-action="increase">+</button>
+                        <button class="delete-btn" data-action="delete">🗑️</button>
+                    </div>
+                </li>`;
+    }).join('');
+
+    // Aggiorna contatore
+    itemCountEl.textContent = shopping.length;
+    
+    // Sincronizza su Firebase Realtime Database
+    syncShoppingList();
+}
+
+function syncShoppingList() {
     if (CURRENT_USER_ID) {
-        db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).get()
-            .then(doc => {
-                if (doc.exists) {
-                    CURRENT_USER_DATA = doc.data();
-                    loginGateEl.style.display = 'none';
-                    mainAppEl.style.display = 'block';
-                    inputFirstNameEl.value = CURRENT_USER_DATA.firstName || '';
-                    inputLastNameEl.value = CURRENT_USER_DATA.lastName || '';
-                    setupPresence(); 
-                } else {
-                    loginGateEl.style.display = 'block';
-                    mainAppEl.style.display = 'none';
-                }
-            })
-            .catch(() => {
-                loginGateEl.style.display = 'block';
-                mainAppEl.style.display = 'none';
-            });
-    } else {
-        loginGateEl.style.display = 'block';
-        mainAppEl.style.display = 'none';
+        dbRT.ref('active_list/').set(shopping)
+            .catch(error => console.error("Errore sincronizzazione Realtime:", error));
     }
 }
 
+function addItem(name, imgUrl) {
+    const existingItem = shopping.find(item => item.nome === name);
 
-/* -------------- FIRESTORE: SALVA / CARICA / ELIMINA (invariato) -------------- */
+    if (existingItem) {
+        // Se l'elemento esiste già, aumenta la quantità e segnalo come da fare
+        existingItem.qty += 1;
+        existingItem.done = false;
+    } else {
+        // Altrimenti, aggiungi un nuovo elemento
+        shopping.push({
+            nome: name,
+            qty: 1,
+            done: false,
+            imgUrl: imgUrl || 'https://placehold.co/40x40' 
+        });
+    }
+
+    renderShopping();
+}
+
+// Funzione per gestire i click sulla lista spesa (aumento, diminuzione, eliminazione, fatto)
+function handleListClick(e) {
+    const target = e.target;
+    const action = target.dataset.action;
+    const listItem = target.closest('li');
+    if (!listItem) return;
+    
+    // Trova l'indice dell'elemento (ricerca per nome è più sicuro in caso di riordino)
+    const itemName = listItem.dataset.name;
+    const itemIndex = shopping.findIndex(item => item.nome === itemName);
+    if (itemIndex === -1) return;
+    
+    const item = shopping[itemIndex];
+
+    switch(action) {
+        case 'increase':
+            item.qty += 1;
+            break;
+        case 'decrease':
+            item.qty -= 1;
+            if (item.qty <= 0) {
+                // Rimuovi se la quantità è zero o meno
+                shopping.splice(itemIndex, 1);
+            }
+            break;
+        case 'delete':
+            if (confirm(`Sei sicuro di voler eliminare "${item.nome}"?`)) {
+                shopping.splice(itemIndex, 1);
+            }
+            break;
+        case 'toggle-done':
+            item.done = !item.done;
+            break;
+    }
+    
+    // Se l'azione non è stata l'eliminazione, il re-render
+    // La re-render viene eseguita comunque per l'aggiornamento della quantità
+    renderShopping();
+}
+
+
+/* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE -------------- */
+
 async function saveList() {
-  const listName = prompt("Inserisci un nome per la lista:");
-  if (!listName) return;
+    if (shopping.length === 0) {
+        alert("La lista è vuota. Non c'è nulla da salvare.");
+        return;
+    }
 
-  const listData = {
-    name: listName,
-    items: shopping,
-    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-  };
+    const listName = prompt("Inserisci un nome per la lista da salvare:");
+    if (!listName || listName.trim() === "") return;
 
-  try {
-    await db.collection("liste_salvate").add(listData);
-    alert(`Lista "${listName}" salvata con successo!`);
-    loadLists(); 
-  } catch (err) {
-    console.error("Errore nel salvataggio:", err);
-    alert("Errore nel salvataggio della lista.");
-  }
+    try {
+        const payload = {
+            name: listName.trim(),
+            items: shopping,
+            userId: CURRENT_USER_ID,
+            userName: `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection("liste_salvate").add(payload);
+        alert(`Lista "${listName}" salvata con successo!`);
+        loadLists(); // Aggiorna l'elenco delle liste salvate
+    } catch (err) {
+        console.error("Errore nel salvataggio della lista:", err);
+        alert("Errore nel salvataggio della lista.");
+    }
 }
 
 async function loadLists() {
-  savedListsEl.innerHTML = "<p>Caricamento...</p>";
-  try {
-    const snapshot = await db.collection("liste_salvate").orderBy("timestamp", "desc").get();
-    savedListsEl.innerHTML = "";
+    try {
+        const snapshot = await db.collection("liste_salvate").orderBy("createdAt", "desc").limit(10).get();
+        let html = '';
 
-    snapshot.forEach(doc => {
-      const list = doc.data();
-      const listItem = document.createElement("div");
-      listItem.className = "saved-list-item";
+        if (snapshot.empty) {
+            savedListsEl.innerHTML = '<p class="muted">Nessuna lista salvata trovata.</p>';
+            return;
+        }
 
-      const date = list.timestamp ? list.timestamp.toDate().toLocaleDateString('it-IT', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Data sconosciuta';
-      
-      listItem.innerHTML = `
-        <span>${list.name} (${list.items.length} articoli) - ${date}</span>
-        <div>
-          <button class="button" data-id="${doc.id}" data-action="load">Carica</button>
-          <button class="button danger" data-id="${doc.id}" data-action="delete">Elimina</button>
-        </div>
-      `;
-      savedListsEl.appendChild(listItem);
-    });
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const date = data.createdAt ? data.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
+            html += `<div class="saved-list-item">
+                        <span>${data.name}</span>
+                        <span class="muted-small">Salvata da: ${data.userName} il ${date}</span>
+                        <div class="actions">
+                            <button data-action="load" data-id="${doc.id}">Carica</button>
+                            <button data-action="delete" data-id="${doc.id}" class="danger">Elimina</button>
+                        </div>
+                    </div>`;
+        });
 
-    if (snapshot.empty) {
-      savedListsEl.innerHTML = "<p>Nessuna lista salvata.</p>";
+        savedListsEl.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore nel caricamento delle liste salvate:", err);
+        savedListsEl.innerHTML = '<p class="muted">Errore nel caricamento.</p>';
     }
-
-  } catch (err) {
-    console.error("Errore nel caricamento delle liste:", err);
-    savedListsEl.innerHTML = "<p>Errore nel caricamento delle liste.</p>";
-  }
 }
 
-/* -------------- FUNZIONI PDF e CONDIVISIONE (AGGIUNTE) -------------- */
+
+/* -------------- FUNZIONI PDF e CONDIVISIONE (IMPLEMENTATE) -------------- */
 
 function downloadStyledPDF() {
-    // 1. Inizializza jsPDF
+    // Verifica se l'API jsPDF è disponibile
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        alert("Libreria jsPDF non caricata correttamente. Impossibile generare il PDF.");
+        return;
+    }
+
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
@@ -549,6 +381,7 @@ function downloadStyledPDF() {
     if (pdfNote) {
         doc.setFontSize(10);
         doc.setTextColor(150, 150, 150); // Grigio
+        // Avvolge il testo per adattarlo alla larghezza della pagina
         const noteLines = doc.splitTextToSize(`Nota: ${pdfNote}`, pageWidth - 2 * margin);
         doc.text(noteLines, pageWidth / 2, y, { align: "center" });
         y += noteLines.length * 5 + 5;
@@ -586,140 +419,115 @@ function downloadStyledPDF() {
         });
     }
 
-    // 2. Esegui il download
+    // Esegui il download
     doc.save("ListaSpesa.pdf");
     pdfNote = ""; // Pulisci la nota dopo il download
-    pdfNoteInput.value = "";
+    pdfNoteInputEl.value = "";
+    pdfNoteContainerEl.style.display = 'none'; // Nasconde l'input della nota
 }
 
 function sharePDF() {
-    // 1. Chiama la funzione di download per generare il PDF
-    downloadStyledPDF(); 
-    // Nota: Il download avviene localmente. L'API Web Share richiede un URL del file.
-    // L'unica possibilità è condividere un link al PDF se fosse su un server,
-    // o semplicemente condividere il testo della lista, come fallback.
+    // Prepara il testo della lista per la condivisione diretta (l'API Web Share non condivide direttamente i file generati al volo)
 
     const listText = shopping.map(item => 
         `[${item.done ? 'X' : ' '}] ${item.nome} (Qta: ${item.qty})`
     ).join('\n');
 
     const shareData = {
-        title: 'Lista Spesa',
+        title: 'Lista Spesa Condivisa',
         text: `Ecco la nostra lista della spesa:\n\n${pdfNote ? `Nota: ${pdfNote}\n\n` : ''}${listText}`,
+        // URL da condividere se ne hai uno (es. l'URL della tua app)
+        url: window.location.href, 
     };
 
-    // 2. Usa l'API Web Share
     if (navigator.share) {
         navigator.share(shareData)
             .then(() => console.log('Contenuto della lista condiviso con successo.'))
-            .catch((error) => console.error('Errore durante la condivisione', error));
+            .catch((error) => {
+                console.error('Errore durante la condivisione:', error);
+                // Fallback: scarica il PDF se la condivisione fallisce
+                downloadStyledPDF();
+            });
     } else {
-        // Fallback per browser non supportati
-        alert("L'API di condivisione non è supportata dal tuo browser. Copia il testo:\n\n" + shareData.text);
+        // Fallback per browser non supportati: scarica il PDF
+        alert("Il tuo browser non supporta l'API di condivisione. Verrà scaricato il PDF.");
+        downloadStyledPDF();
     }
     
-    pdfNote = ""; // Pulisci la nota dopo la condivisione
-    pdfNoteInput.value = "";
+    pdfNote = ""; // Pulisci la nota dopo l'azione
+    pdfNoteInputEl.value = "";
+    pdfNoteContainerEl.style.display = 'none';
 }
-// Ho incluso la funzione downloadStyledPDF qui sopra per farla funzionare, 
-// ma la devi anche rimuovere da dove l'ho messa in questo commento e 
-// metterla nel file script.js in una zona appropriata.
 
 
-/* -------------- INIZIALIZZAZIONE -------------- */
+/* -------------- EVENT LISTENERS -------------- */
 
-window.addEventListener("beforeunload", persistLocal);
-restoreLocal(); 
-
-loadAndWatchUsers(); 
-
-checkLocalLogin(); 
-
-renderCatalog(catalogo);
-renderShopping();
-
-/* -------------- EVENTI -------------- */
-searchInput.addEventListener("input", () => {
-  const q = searchInput.value.trim().toLowerCase();
-  const filtered = catalogo.filter(p =>
-    p.nome.toLowerCase().includes(q) || p.categoria.toLowerCase().includes(q)
-  );
-  renderCatalog(filtered);
+// EVENTO CATALOGO: Aggiunge elemento alla lista
+catalogEl.addEventListener("click", (e) => {
+    const itemEl = e.target.closest(".catalog-item");
+    if (itemEl) {
+        const name = itemEl.dataset.name;
+        const imgUrl = itemEl.dataset.imgUrl;
+        addItem(name, imgUrl);
+    }
 });
 
-addManualBtn.addEventListener("click", async () => {
-  const val = manualInput.value.trim();
-  if (!val) return;
+// EVENTO LISTA SPESA: Gestisce aumento/diminuzione/eliminazione/fatto
+shoppingItemsEl.addEventListener("click", handleListClick);
 
-  const normalizedVal = val.toLowerCase();
-
-  if (!catalogo.some(p => p.nome.toLowerCase() === normalizedVal)) {
-    // Aggiunto senza imgUrl. Il render userà l'icona placeholder '?'
-    catalogo.push({ categoria: "Altro", nome: val });
-
-    await saveCatalogFirestore();
-
-    renderCatalog(catalogo);
-  }
-
-  addItemToShopping(val);
-  manualInput.value = "";
+// EVENTO PULSANTE AGGIUNGI MANUALE
+addManualBtnEl.addEventListener("click", () => {
+    const name = addManualInputEl.value.trim();
+    if (name) {
+        // Usa un placeholder generico se l'immagine è aggiunta manualmente
+        addItem(name, 'https://placehold.co/40x40/60A5FA/FFFFFF?text=Manuale'); 
+        addManualInputEl.value = "";
+    }
+});
+addManualInputEl.addEventListener("keypress", (e) => {
+    if (e.key === 'Enter') {
+        addManualBtnEl.click();
+    }
 });
 
-// Gestione degli eventi di aumento/diminuzione/cancellazione della lista
-shoppingItemsEl.addEventListener("click", async (e) => {
-    const target = e.target;
-    const action = target.dataset.action;
-    
-    // Per toggle, usiamo l'input checkbox
-    if (target.type === 'checkbox' && action === 'toggle') {
-        const li = target.closest('li');
-        const index = parseInt(li.dataset.index);
-        if (isNaN(index)) return;
-
-        shopping[index].done = !shopping[index].done;
+// EVENTO PULSANTE PULISCI
+clearBtnEl.addEventListener("click", () => {
+    if (confirm("Sei sicuro di voler pulire l'intera lista?")) {
+        shopping = [];
         renderShopping();
-        return;
     }
+});
 
-    // Per i bottoni, l'indice è sull'elemento button
-    const li = target.closest('li');
-    if (!li) return;
+// EVENTO PULSANTE SALVA
+saveBtnEl.addEventListener("click", saveList);
 
-    const index = parseInt(li.dataset.index);
-    if (isNaN(index)) return;
+// EVENTO PULSANTE CARICA
+loadBtnEl.addEventListener("click", loadLists);
 
+// EVENTO PULSANTE SCARICA PDF
+downloadBtnEl.addEventListener("click", () => {
+    // Mostra il campo della nota prima di avviare il download
+    pdfNoteContainerEl.style.display = 'block';
+    // Il download viene gestito dopo la conferma della nota
+});
 
-    if (action === "increase") {
-        shopping[index].qty += 1;
-    } else if (action === "decrease") {
-        shopping[index].qty = Math.max(1, shopping[index].qty - 1);
-    } else if (action === "delete") {
-        shopping.splice(index, 1);
-    }
+// EVENTO PULSANTE CONDIVIDI PDF
+shareBtnEl.addEventListener("click", () => {
+    // Mostra il campo della nota prima di avviare la condivisione
+    pdfNoteContainerEl.style.display = 'block';
+    // La condivisione viene gestita dopo la conferma della nota
+});
 
-    renderShopping();
+// EVENTO CONFERMA NOTA PDF
+pdfNoteConfirmBtnEl.addEventListener("click", () => {
+    pdfNote = pdfNoteInputEl.value.trim();
+    // Determina quale azione (download o share) deve seguire la conferma della nota
+    // Utilizziamo il download come azione predefinita dopo la conferma.
+    downloadStyledPDF(); 
 });
 
 
-saveBtn.addEventListener("click", saveList);
-loadBtn.addEventListener("click", loadLists);
-
-downloadBtn.addEventListener("click", () => {
-  showPDFNoteInput(downloadStyledPDF);
-});
-
-shareBtn.addEventListener("click", () => {
-  showPDFNoteInput(sharePDF);
-});
-
-clearBtn.addEventListener("click", () => {
-  if (!confirm("Sei sicuro di voler pulire l'intera lista della spesa?")) return;
-  shopping = [];
-  renderShopping();
-});
-
-// GESTIONE EVENTI LISTE SALVATE
+// EVENTI LISTE SALVATE
 savedListsEl.addEventListener("click", async (e) => {
     const target = e.target;
     const action = target.dataset.action;
@@ -760,3 +568,99 @@ loginButtonEl.addEventListener("click", handleLogin);
 inputLastNameEl.addEventListener("keypress", (e) => {
     if (e.key === 'Enter') handleLogin();
 });
+
+
+// EVENTO LOGOUT
+logoutButtonEl.addEventListener("click", handleLogout);
+
+
+/* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
+
+function listenToActiveUsers() {
+    dbRT.ref('active_users/').on('value', (snapshot) => {
+        const users = snapshot.val();
+        let html = '';
+        if (users) {
+            Object.keys(users).forEach(id => {
+                const user = users[id];
+                const isMe = id === CURRENT_USER_ID;
+                html += `<li class="${isMe ? 'me' : ''}">
+                            ${user.firstName} ${user.lastName} 
+                            <span class="online-indicator"></span>
+                        </li>`;
+            });
+        } else {
+            html = '<li>Nessun altro utente attivo.</li>';
+        }
+        activeUsersListEl.innerHTML = html;
+    });
+}
+
+function listenToActiveList() {
+    dbRT.ref('active_list/').on('value', (snapshot) => {
+        // Questa funzione si attiva OGNI VOLTA che la lista nel Realtime Database cambia
+        const remoteList = snapshot.val();
+        
+        // Controlla se il cambiamento è stato innescato da te (potrebbe richiedere un controllo più sofisticato)
+        // Per ora, sincronizziamo se la lista locale è diversa da quella remota (utile per la collaborazione)
+        if (JSON.stringify(remoteList) !== JSON.stringify(shopping)) {
+            shopping = remoteList || [];
+            renderShopping();
+        }
+    });
+}
+
+
+/* -------------- INIZIALIZZAZIONE -------------- */
+
+function initializeApp() {
+    if (CURRENT_USER_ID) {
+        // Utente loggato: mostra l'app
+        loginGateEl.style.display = 'none';
+        mainAppEl.style.display = 'grid';
+        loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
+
+        // Avvia i listener di Firebase Realtime
+        listenToActiveUsers();
+        listenToActiveList();
+        
+        // Imposta la disconnessione automatica al reload/chiusura
+        dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
+
+    } else {
+        // Utente non loggato: mostra il gate di login
+        loginGateEl.style.display = 'flex';
+        mainAppEl.style.display = 'none';
+        loggedInUserEl.textContent = "Offline";
+    }
+
+    renderCatalog();
+    renderShopping();
+    loadLists(); // Carica le liste salvate al primo accesso
+}
+
+
+// Controlla il login all'avvio della pagina
+async function checkLoginStatus() {
+    if (CURRENT_USER_ID) {
+        // Prova a recuperare i dati utente da Firestore in base all'ID locale
+        try {
+            const doc = await db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).get();
+            if (doc.exists) {
+                CURRENT_USER_DATA = doc.data();
+                initializeApp();
+            } else {
+                // ID locale obsoleto, forzo il re-login
+                handleLogout(); 
+            }
+        } catch (err) {
+            console.error("Errore nel recupero dati utente:", err);
+            handleLogout(); 
+        }
+    } else {
+        initializeApp();
+    }
+}
+
+// Avvia l'app
+checkLoginStatus();

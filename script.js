@@ -1,10 +1,11 @@
 /* =================================================================
-   FILE: script.js - Codice Completo e Funzionante
+   FILE: script.js - Codice Completo e Funzionante con Catalogo esteso e ricerca
    ================================================================= */
 
 /* -------------- FIREBASE CONFIG (LA TUA) -------------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVdUIOb9J40",
+  // SOSTITUISCI CON LA TUA CONFIGURAZIONE REALE!
+  apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVdUIOb9J40", 
   authDomain: "lista-spesa-db7f7.firebaseapp.com",
   projectId: "lista-spesa-db7f7",
   storageBucket: "lista-spesa-db7f7.firebasestorage.app",
@@ -23,13 +24,12 @@ let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
 let pdfNote = ""; 
 let shopping = []; 
-let actionPending = ''; // Traccia l'azione PDF/Condividi
+let actionPending = '';
 
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
-let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl;
+let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; // AGGIUNTO searchInputEl
 
-
-/* -------------- CATALOGO PRODOTTI (Placeholder) -------------- */
+/* -------------- CATALOGO PRODOTTI ESTESO -------------- */
 const catalogo = [
     /* =========================================================
        SEZIONE 1: FRUTTA E VERDURA 🍎🥦
@@ -168,6 +168,7 @@ const catalogo = [
     { categoria: "Varie", nome: "Pile stilo AA", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Pile" }
 ];
 
+
 /* -------------- FUNZIONI BASE -------------- */
 
 function generateUUID() {
@@ -180,7 +181,7 @@ function generateUUID() {
 function initializeApp() {
     if (CURRENT_USER_ID) {
         loginGateEl.style.display = 'none';
-        mainAppEl.style.display = 'grid'; // Usa 'grid' come definito nel CSS per il layout desktop
+        mainAppEl.style.display = 'grid'; 
         loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
 
         // Avvio dei listener Realtime
@@ -190,12 +191,12 @@ function initializeApp() {
         // Imposta l'utente come offline quando si disconnette
         dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
     } else {
-        loginGateEl.style.display = 'flex'; // Centrato via Flexbox nel CSS
+        loginGateEl.style.display = 'flex'; 
         mainAppEl.style.display = 'none';
         if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
     }
 
-    renderCatalog();
+    renderCatalog(catalogo); // Inizializza il catalogo completo
     renderShopping();
     loadLists(); 
 }
@@ -235,8 +236,7 @@ async function handleLogin() {
 
         initializeApp();
     } catch (error) {
-         // Gestione errore di rete/firebase durante il login
-        console.error("Errore durante il login/registrazione:", error);
+         console.error("Errore durante il login/registrazione:", error);
         alert("Errore di connessione o autenticazione. Riprova più tardi."); 
     }
 }
@@ -257,15 +257,22 @@ function handleLogout() {
 }
 
 
-/* -------------- FUNZIONI LISTA SPESA (RENDER e LOGICA) -------------- */
+/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA) -------------- */
 
-function renderCatalog() {
+function renderCatalog(itemsToRender) {
     let html = '';
     let currentCategory = '';
 
-    catalogo.forEach(item => {
+    // Filtra e ordina gli elementi passati (quelli filtrati o l'intero catalogo)
+    const sortedItems = [...itemsToRender].sort((a, b) => {
+        if (a.categoria !== b.categoria) {
+            return a.categoria.localeCompare(b.categoria);
+        }
+        return a.nome.localeCompare(b.nome);
+    });
+
+    sortedItems.forEach(item => {
         if (item.categoria !== currentCategory) {
-            // Usa h3 o un div con classe .catalog-category per lo stile
             html += `<h3 class="catalog-category">${item.categoria}</h3>`;
             currentCategory = item.categoria;
         }
@@ -275,9 +282,27 @@ function renderCatalog() {
                 </div>`;
     });
 
-    // CORREZIONE: Uso di catalogListEl, l'elemento che contiene il catalogo
     if(catalogListEl) catalogListEl.innerHTML = html;
 }
+
+function handleSearch() {
+    const searchTerm = searchInputEl.value.toLowerCase().trim();
+    
+    if (searchTerm.length < 2 && searchTerm !== "") return; // Non filtra per un solo carattere (eccetto stringa vuota)
+
+    const filteredCatalog = catalogo.filter(item => 
+        item.nome.toLowerCase().includes(searchTerm) || 
+        item.categoria.toLowerCase().includes(searchTerm)
+    );
+
+    renderCatalog(filteredCatalog);
+
+    // Scorri in cima alla lista dopo il filtro (migliore UX)
+    catalogListEl.scrollTop = 0; 
+}
+
+
+/* -------------- FUNZIONI LISTA SPESA (RENDER e LOGICA) -------------- */
 
 function renderShopping() {
     const sortedShopping = [...shopping].sort((a, b) => {
@@ -310,7 +335,6 @@ function renderShopping() {
 
 function syncShoppingList() {
     if (CURRENT_USER_ID) {
-        // Aggiorna solo se loggato
         dbRT.ref('active_list/').set(shopping)
             .catch(error => console.error("Errore sincronizzazione Realtime:", error));
     }
@@ -321,7 +345,7 @@ function addItem(name, imgUrl) {
 
     if (existingItem) {
         existingItem.qty += 1;
-        existingItem.done = false; // Riattiva l'articolo se viene aggiunto di nuovo
+        existingItem.done = false; 
     } else {
         shopping.push({
             nome: name,
@@ -346,11 +370,9 @@ function handleListClick(e) {
     
     const item = shopping[itemIndex];
 
-    // Se l'elemento cliccato è una checkbox
     if (target.type === 'checkbox' && action === 'toggle-done') {
          item.done = target.checked; 
     } else {
-        // Logica per i bottoni +,-, delete
         switch(action) {
             case 'increase': item.qty += 1; break;
             case 'decrease':
@@ -397,7 +419,6 @@ async function saveList() {
 
 async function loadLists() {
     try {
-        // Carica le 10 liste più recenti
         const snapshot = await db.collection("liste_salvate").orderBy("createdAt", "desc").limit(10).get();
         let html = '';
 
@@ -410,7 +431,7 @@ async function loadLists() {
             const data = doc.data();
             const date = data.createdAt ? data.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
             html += `<div class="saved-list-item">
-                        <span>${data.name}</span>
+                        <span class="list-name">${data.name}</span>
                         <span class="muted-small">Salvata da: ${data.userName} il ${date}</span>
                         <div class="actions">
                             <button data-action="load" data-id="${doc.id}">Carica</button>
@@ -511,7 +532,6 @@ function sharePDF() {
         navigator.share(shareData)
             .catch((error) => {
                 console.error('Errore durante la condivisione:', error);
-                // Fallback in caso di errore (es. annullamento utente)
                 downloadStyledPDF(); 
             });
     } else {
@@ -532,8 +552,7 @@ async function fetchAllRegisteredUsers() {
         const snapshot = await db.collection(USER_COLLECTION_NAME).get();
         const users = {};
         snapshot.forEach(doc => {
-            // Mappa l'ID del documento per un facile lookup
-            users[doc.id] = { ...doc.data(), id: doc.id }; // INCLUSIONE DELL'ID COME PROPRIETÀ
+            users[doc.id] = { ...doc.data(), id: doc.id }; 
         });
         return users;
     } catch (error) {
@@ -545,16 +564,12 @@ async function fetchAllRegisteredUsers() {
 async function listenToActiveUsers() {
     if (!CURRENT_USER_ID) return; 
 
-    // 1. Ottiene la lista completa degli utenti registrati (da Firestore)
     const allUsers = await fetchAllRegisteredUsers();
     
-    // 2. Ascolta gli utenti attivi (da Realtime DB)
     dbRT.ref('active_users/').on('value', (snapshot) => {
         const activeUsers = snapshot.val() || {};
         
-        // 3. Combina le liste e determina lo stato per TUTTI gli utenti
         const finalUsersList = Object.values(allUsers).map(user => {
-            // Verifica se l'ID utente è presente nella lista activeUsers (Realtime DB)
             const isActive = activeUsers.hasOwnProperty(user.id); 
             
             return {
@@ -562,19 +577,16 @@ async function listenToActiveUsers() {
                 isOnline: isActive
             };
         }).sort((a, b) => {
-             // Ordina: Online prima, poi alfabeticamente per nome
             if (a.isOnline === b.isOnline) {
                 return a.firstName.localeCompare(b.firstName);
             }
             return a.isOnline ? -1 : 1;
         });
 
-        // 4. Renderizza la lista combinata con i pallini
         let html = '';
         if (finalUsersList.length > 0) {
             finalUsersList.forEach(user => {
                 const isMe = user.id === CURRENT_USER_ID;
-                // Usa le classi CSS definite (status-indicator, status-online/offline)
                 const statusClass = user.isOnline ? 'status-online' : 'status-offline';
                 
                 html += `<li class="${isMe ? 'me' : ''}">
@@ -596,7 +608,6 @@ async function listenToActiveUsers() {
 function listenToActiveList() {
     dbRT.ref('active_list/').on('value', (snapshot) => {
         const remoteList = snapshot.val();
-        // Previene il loop di sincronizzazione se la lista locale è identica a quella remota
         if (JSON.stringify(remoteList) !== JSON.stringify(shopping)) {
             shopping = remoteList || [];
             renderShopping();
@@ -610,27 +621,29 @@ function listenToActiveList() {
 /* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA -------------- */
 
 function getDOMElements() {
-    // Cattura tutti gli elementi DOM
     loginGateEl = document.getElementById("loginGate");
     mainAppEl = document.getElementById("mainApp");
     loginButtonEl = document.getElementById("loginButton");
     inputFirstNameEl = document.getElementById("inputFirstName");
     inputLastNameEl = document.getElementById("inputLastName");
-    // ELEMENTI AGGIUNTI (DEVONO ESISTERE O FALLISCE)
     loggedInUserEl = document.getElementById("loggedInUser");
     logoutButtonEl = document.getElementById("logoutButton");
     
-    // CORREZIONE: Puntamento all'ID corretto
+    // Elementi del Catalogo/Ricerca
     catalogListEl = document.getElementById("catalogList");
+    searchInputEl = document.getElementById("searchInput"); // AGGIUNTO
     
+    // Elementi della Lista Spesa
     shoppingItemsEl = document.getElementById("shoppingItems");
     itemCountEl = document.getElementById("itemCount");
-    addManualInputEl = document.getElementById("manualInput"); // Correzione ID
+    addManualInputEl = document.getElementById("manualInput"); 
     addManualBtnEl = document.getElementById("addManualBtn");
     clearBtnEl = document.getElementById("clearBtn");
     saveBtnEl = document.getElementById("saveBtn");
     loadBtnEl = document.getElementById("loadBtn");
     savedListsEl = document.getElementById("savedLists");
+    
+    // Elementi Utenti e PDF
     activeUsersListEl = document.getElementById("activeUsersList");
     pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
     pdfNoteInputEl = document.getElementById("pdfNoteInput");
@@ -638,9 +651,8 @@ function getDOMElements() {
     downloadBtnEl = document.getElementById("downloadBtn");
     shareBtnEl = document.getElementById("shareBtn");
     
-    // Verifica critica per l'interfaccia
     if (!loginGateEl || !mainAppEl || !loggedInUserEl || !logoutButtonEl) {
-         console.error("ERRORE CRITICO: Elementi HTML essenziali (loginGate, mainApp, loggedInUser, logoutButton) non trovati. Assicurati che index.html sia completo.");
+         console.error("ERRORE CRITICO: Elementi HTML essenziali non trovati. Assicurati che index.html sia completo.");
          document.body.innerHTML = "<h1 style='color:red;'>Errore: Impossibile caricare l'interfaccia. Controlla index.html.</h1>";
          return false;
     }
@@ -649,7 +661,6 @@ function getDOMElements() {
 
 function addAllEventListeners() {
     // EVENTI APP
-    // L'evento deve essere su catalogListEl che contiene gli elementi
     catalogListEl.addEventListener("click", (e) => {
         const itemEl = e.target.closest(".catalog-item");
         if (itemEl) {
@@ -659,13 +670,13 @@ function addAllEventListeners() {
         }
     });
     
-    // Corretto per gestire sia checkbox che bottoni
+    searchInputEl.addEventListener("input", handleSearch); // Ricerca in tempo reale
+    
     shoppingItemsEl.addEventListener("click", handleListClick);
     
     addManualBtnEl.addEventListener("click", () => {
         const name = addManualInputEl.value.trim();
         if (name) {
-            // Placeholder immagine per l'aggiunta manuale
             addItem(name, 'https://placehold.co/50x50/60A5FA/FFFFFF?text=Manuale'); 
             addManualInputEl.value = "";
         }
@@ -682,7 +693,7 @@ function addAllEventListeners() {
     saveBtnEl.addEventListener("click", saveList);
     loadBtnEl.addEventListener("click", loadLists);
     
-    // EVENTI PDF/CONDIVISIONE (uso di actionPending per la nota)
+    // EVENTI PDF/CONDIVISIONE
     downloadBtnEl.addEventListener("click", () => {
         pdfNoteContainerEl.style.display = 'block';
         actionPending = 'download';
@@ -733,7 +744,6 @@ function addAllEventListeners() {
     inputLastNameEl.addEventListener("keypress", (e) => {
         if (e.key === 'Enter') handleLogin();
     });
-    // LOGOUT AGGIUNTO
     logoutButtonEl.addEventListener("click", handleLogout);
 }
 
@@ -749,18 +759,15 @@ async function checkLoginStatus() {
                 handleLogout(); 
             }
         } catch (err) {
-            console.error("Errore nel recupero dati utente (Firestore/Network):", err);
-            alert("Errore di rete o di connessione al database. Riprova più tardi.");
+            console.error("Errore nel recupero dati utente:", err);
             handleLogout(); 
         }
     } else {
-        // Se non c'è ID in localStorage, assicurati che la UI di login sia mostrata
         initializeApp();
     }
 }
 
 
-// AVVIO SICURO: Avvia l'app solo quando tutti gli elementi HTML sono caricati
 document.addEventListener('DOMContentLoaded', () => {
     if (!getDOMElements()) return; 
     addAllEventListeners();

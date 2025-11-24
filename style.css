@@ -366,7 +366,12 @@ ul#shoppingItems li .left span {
 .delete-btn {
     background-color: var(--danger-color);
     color: white;
-    font-size: 0.9em;
+    /* Modifiche per centrare l'emoji */
+    font-size: 1.2em; /* Rendi l'emoji più grande */
+    line-height: 25px; /* Forza la stessa altezza del bottone per centrare */
+}
+.delete-btn:hover {
+    background-color: #c43232;
 }
 
 .list-controls {

@@ -24,6 +24,7 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
+  min-height: 100vh; /* Assicura che il corpo occupi l'intera altezza del viewport */
 }
 
 h1, h2 {
@@ -37,11 +38,13 @@ h1, h2 {
   margin-bottom: 20px;
 }
 
+/* Contenitore principale APP */
 .app {
-  max-width: 1200px; /* Larghezza massima aumentata per desktop */
+  max-width: 1200px; 
   margin: 20px auto;
   padding: 15px;
   border-radius: 15px;
+  background-color: #1a2434;
 }
 
 .rainbow-border {
@@ -63,7 +66,7 @@ h1, h2 {
   }
 
   .catalog {
-    flex: 1.2; /* Il catalogo occupa un po' di piÃ¹ per le immagini */
+    flex: 1.2;
     min-width: 300px;
   }
 
@@ -77,38 +80,57 @@ h1, h2 {
   }
 }
 
-/* ================== SCHERMATA DI ACCESSO ================== */
+/* ================== 🟢 SCHERMATA DI ACCESSO (FIXED/CENTERED) 🟢 ================== */
 .login-gate {
-  max-width: 400px;
-  margin: 50px auto;
+  /* Fissa la schermata su tutto il viewport */
+  position: fixed; 
+  top: 0; 
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-color); 
+  z-index: 1000; 
+  
+  /* Centratura Flexbox perfetta */
+  display: flex;
+  justify-content: center; /* Centra orizzontalmente */
+  align-items: center; /* Centra verticalmente */
+  flex-direction: column; /* Impila gli elementi per centrarli come blocco */
+  
+  /* Aggiunge padding per i bordi su schermi piccoli */
   padding: 30px;
-  border-radius: 15px;
-  background-color: #1e293b;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  text-align: center;
+  box-sizing: border-box;
 }
 
+.login-gate h2, .login-gate input, .login-gate button {
+  /* Limita la larghezza del box centrale */
+  max-width: 400px; 
+  width: 100%;
+  /* Assicura che gli elementi si centrino all'interno del login-gate */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Stili specifici del Box di Login (utilizziamo input e button per applicare lo stile) */
 .login-gate h2 {
   color: var(--text-color);
   margin-bottom: 20px;
 }
 
 .login-gate input {
-  width: 100%;
   padding: 10px;
   margin-bottom: 15px;
   box-sizing: border-box;
   border-radius: 8px;
   border: 1px solid #334155;
-  background-color: var(--bg-color);
+  background-color: #1e293b; /* Sfondo scuro per gli input */
   color: var(--text-color);
 }
 
 .login-gate button {
-  width: 100%;
   padding: 10px;
   font-size: 1.1rem;
-  background-color: #00ff00;
+  background-color: var(--online-color); /* Verde acceso */
   color: var(--bg-color);
   border: none;
   border-radius: 8px;
@@ -216,7 +238,6 @@ ul#activeUsersList li:last-child {
   padding: 10px 0;
 }
 
-/* Nuovo stile per il singolo item del catalogo */
 .catalog-item {
   background-color: #475569;
   color: var(--text-color);
@@ -224,7 +245,7 @@ ul#activeUsersList li:last-child {
   border-radius: 6px;
   cursor: pointer;
   transition: background-color 0.1s;
-  display: flex; /* Importante per allineare immagine e testo */
+  display: flex; 
   align-items: center;
   gap: 10px;
   flex-basis: calc(50% - 4px); /* Su mobile 2 colonne */
@@ -235,7 +256,6 @@ ul#activeUsersList li:last-child {
   background-color: #334155;
 }
 
-/* Stile per l'immagine del catalogo */
 .product-photo-catalog {
   width: 40px; 
   height: 40px;
@@ -261,7 +281,7 @@ ul#activeUsersList li:last-child {
 .catalog-category {
   width: 100%;
   font-weight: bold;
-  color: #a7f3d0; /* Verde chiaro */
+  color: #a7f3d0; 
   margin-top: 10px;
 }
 
@@ -282,7 +302,7 @@ ul#activeUsersList li:last-child {
 }
 @media (min-width: 1200px) {
   .catalog-item {
-    flex-basis: calc(50% - 4px); /* 2 colonne se il catalogo Ã¨ largo */
+    flex-basis: calc(50% - 4px); /* 2 colonne se il catalogo è largo */
   }
 }
 
@@ -335,15 +355,14 @@ ul#shoppingItems li .left {
 }
 
 ul#shoppingItems li .left input[type="checkbox"] {
-  transform: scale(1.5); /* Ingrandisce la checkbox */
+  transform: scale(1.5);
   cursor: pointer;
 }
 
-/* Stile per l'immagine nella lista spesa */
 .product-photo-list {
   width: 40px;
   height: 40px;
-  border-radius: 4px; /* Immagini quadrate nella lista */
+  border-radius: 4px; 
   object-fit: cover;
   flex-shrink: 0;
 }

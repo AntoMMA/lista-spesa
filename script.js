@@ -484,7 +484,7 @@ function renderShopping() {
                     <div class="right">
                         <button class="qty-btn" data-action="decrease">-</button>
                         <button class="qty-btn" data-action="increase">+</button>
-                        <button class="delete-btn" data-action="delete">ðï¸</button>
+                        <button class="delete-btn" data-action="delete">🗑️</button>
                     </div>
                 </li>`;
     }).join('');

@@ -38,26 +38,136 @@ async function saveCatalogFirestore() {
   }
 }
 
-/* -------------- CATALOGO PREIMPOSTATO -------------- */
+/* -------------- CATALOGO PREIMPOSTATO AMPLIATO -------------- */
 const catalogo = [
-  { categoria: "Frutta", nome: "Mele" },
-  { categoria: "Frutta", nome: "Banane" },
-  { categoria: "Frutta", nome: "Arance" },
-  { categoria: "Verdura", nome: "Pomodori" },
-  { categoria: "Verdura", nome: "Lattuga" },
-  { categoria: "Verdura", nome: "Patate" },
-  { categoria: "Latticini", nome: "Latte" },
-  { categoria: "Latticini", nome: "Uova" },
-  { categoria: "Latticini", nome: "Yogurt" },
-  { categoria: "Carne/Pesce", nome: "Pollo" },
-  { categoria: "Carne/Pesce", nome: "Salmone" },
-  { categoria: "Pane/Pasta", nome: "Pane fresco" },
-  { categoria: "Pane/Pasta", nome: "Pasta" },
-  { categoria: "Bevande", nome: "Acqua minerale" },
-  { categoria: "Bevande", nome: "Succo d'arancia" },
-  { categoria: "Altro", nome: "Zucchero" },
-  { categoria: "Altro", nome: "Sale" },
+  // --- FRUTTA E VERDURA ---
+  { categoria: "Frutta fresca", nome: "Mele Golden" },
+  { categoria: "Frutta fresca", nome: "Banane" },
+  { categoria: "Frutta fresca", nome: "Arance da tavola" },
+  { categoria: "Frutta fresca", nome: "Uva bianca" },
+  { categoria: "Frutta fresca", nome: "Fragole" },
+  { categoria: "Frutta fresca", nome: "Limoni" },
+  { categoria: "Frutta fresca", nome: "Kiwi" },
+
+  { categoria: "Verdura a foglia", nome: "Insalata iceberg" },
+  { categoria: "Verdura a foglia", nome: "Spinaci freschi" },
+  { categoria: "Verdura a foglia", nome: "Rucola" },
+  { categoria: "Verdura base", nome: "Pomodori ramati" },
+  { categoria: "Verdura base", nome: "Zucchine" },
+  { categoria: "Verdura base", nome: "Carote" },
+  { categoria: "Verdura base", nome: "Cetrioli" },
+  { categoria: "Verdura base", nome: "Peperoni gialli" },
+  { categoria: "Verdura base", nome: "Cipolle dorate" },
+  { categoria: "Verdura base", nome: "Aglio" },
+  { categoria: "Verdura base", nome: "Patate a pasta gialla" },
+  { categoria: "Verdura base", nome: "Melanzane" },
+
+  // --- PANETTERIA E CEREALI ---
+  { categoria: "Pane fresco", nome: "Pane casereccio" },
+  { categoria: "Pane fresco", nome: "Baguette" },
+  { categoria: "Pane fresco", nome: "Fette biscottate integrali" },
+  { categoria: "Cereali colazione", nome: "Fiocchi d'avena" },
+  { categoria: "Cereali colazione", nome: "Muesli" },
+  { categoria: "Prodotti da forno", nome: "Grissini" },
+  { categoria: "Prodotti da forno", nome: "Crackers salati" },
+
+  // --- LATTICINI E UOVA ---
+  { categoria: "Latte e Panna", nome: "Latte intero UHT" },
+  { categoria: "Latte e Panna", nome: "Latte parzialmente scremato" },
+  { categoria: "Latte e Panna", nome: "Panna fresca" },
+  { categoria: "Latte e Panna", nome: "Panna da cucina" },
+  { categoria: "Yogurt", nome: "Yogurt bianco naturale" },
+  { categoria: "Yogurt", nome: "Yogurt alla frutta" },
+  { categoria: "Uova", nome: "Uova fresche grandi (conf. 6)" },
+  
+  // --- FORMAGGI E BURRO ---
+  { categoria: "Formaggi freschi", nome: "Mozzarella di bufala" },
+  { categoria: "Formaggi freschi", nome: "Ricotta fresca" },
+  { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato" },
+  { categoria: "Formaggi stagionati", nome: "Emmentaler a fette" },
+  { categoria: "Formaggi stagionati", nome: "Gorgonzola piccante" },
+  { categoria: "Burro e Margarina", nome: "Burro tradizionale" },
+  { categoria: "Burro e Margarina", nome: "Margarina vegetale" },
+  
+  // --- CARNE E PESCE ---
+  { categoria: "Carne bovina", nome: "Fettine di Manzo" },
+  { categoria: "Carne bovina", nome: "Carne macinata scelta" },
+  { categoria: "Carne suina", nome: "Salsiccia fresca" },
+  { categoria: "Carne suina", nome: "Costine di maiale" },
+  { categoria: "Pollame", nome: "Petto di pollo a fette" },
+  { categoria: "Pollame", nome: "Fusi di tacchino" },
+  { categoria: "Pesce fresco", nome: "Filetti di merluzzo" },
+  { categoria: "Pesce fresco", nome: "Salmone affumicato (vaschetta)" },
+  
+  // --- SALUMI E AFFETTATI ---
+  { categoria: "Salumi", nome: "Prosciutto cotto a fette" },
+  { categoria: "Salumi", nome: "Prosciutto crudo" },
+  { categoria: "Salumi", nome: "Salame milano" },
+  { categoria: "Salumi", nome: "Mortadella" },
+  
+  // --- SURGELATI ---
+  { categoria: "Surgelati: Verdure", nome: "Piselli fini surgelati" },
+  { categoria: "Surgelati: Verdure", nome: "Spinaci cubetti surgelati" },
+  { categoria: "Surgelati: Pesce", nome: "Bastoncini di pesce" },
+  { categoria: "Surgelati: Pasti Pronti", nome: "Pizza margherita surgelata" },
+  { categoria: "Surgelati: Dessert", nome: "Gelato alla vaniglia" },
+  
+  // --- PASTA, RISO E LEGUMI SECCHI ---
+  { categoria: "Pasta secca", nome: "Spaghetti n°5" },
+  { categoria: "Pasta secca", nome: "Penne rigate" },
+  { categoria: "Riso", nome: "Riso Carnaroli" },
+  { categoria: "Legumi secchi", nome: "Lenticchie secche" },
+  { categoria: "Legumi secchi", nome: "Fagioli secchi cannellini" },
+  
+  // --- CONSERVE, SALSE E OLII ---
+  { categoria: "Conserve pomodoro", nome: "Passata di pomodoro" },
+  { categoria: "Conserve pomodoro", nome: "Pelati in scatola" },
+  { categoria: "Conserve ittiche", nome: "Tonno sott'olio (vasetto)" },
+  { categoria: "Conserve ittiche", nome: "Sgombro in scatola" },
+  { categoria: "Olii e Condimenti", nome: "Olio extra vergine d'oliva" },
+  { categoria: "Olii e Condimenti", nome: "Aceto di vino bianco" },
+  { categoria: "Salse", nome: "Maionese in tubetto" },
+  { categoria: "Salse", nome: "Ketchup" },
+  { categoria: "Salse", nome: "Senape" },
+  { categoria: "Cibi pronti", nome: "Brodo vegetale in dado" },
+  
+  // --- SPEZIE, SALE E ZUCCHERO ---
+  { categoria: "Spezie e Aromi", nome: "Pepe nero macinato" },
+  { categoria: "Spezie e Aromi", nome: "Origano secco" },
+  { categoria: "Sale e Zucchero", nome: "Sale fino iodato" },
+  { categoria: "Sale e Zucchero", nome: "Zucchero semolato" },
+  { categoria: "Sale e Zucchero", nome: "Miele di acacia" },
+  
+  // --- BEVANDE ---
+  { categoria: "Acqua", nome: "Acqua naturale (bottiglie da 1.5L)" },
+  { categoria: "Acqua", nome: "Acqua frizzante (bottiglie da 1.5L)" },
+  { categoria: "Soft Drinks", nome: "Coca Cola Zero" },
+  { categoria: "Soft Drinks", nome: "Gazzosa" },
+  { categoria: "Succhi", nome: "Succo d'arancia 100%" },
+  { categoria: "Succhi", nome: "Thè al limone" },
+  { categoria: "Vini", nome: "Vino rosso Chianti" },
+  { categoria: "Vini", nome: "Vino bianco frizzante" },
+  { categoria: "Birre", nome: "Birra bionda lager (conf. 6)" },
+  
+  // --- DROGHERIA E PULIZIA ---
+  { categoria: "Igiene personale", nome: "Sapone liquido mani" },
+  { categoria: "Igiene personale", nome: "Shampoo neutro" },
+  { categoria: "Igiene personale", nome: "Dentifricio al fluoro" },
+  { categoria: "Carta e Monouso", nome: "Carta igienica (rotoli)" },
+  { categoria: "Carta e Monouso", nome: "Tovaglioli di carta" },
+  { categoria: "Pulizia casa", nome: "Detersivo pavimenti" },
+  { categoria: "Pulizia casa", nome: "Detersivo per piatti a mano" },
+  { categoria: "Pulizia casa", nome: "Candeggina" },
+  { categoria: "Bucato", nome: "Detersivo lavatrice liquido" },
+  { categoria: "Bucato", nome: "Ammorbidente concentrato" },
+  
+  // --- PET FOOD E VARIE ---
+  { categoria: "Animali domestici", nome: "Crocchette per cani adulti" },
+  { categoria: "Animali domestici", nome: "Cibo umido per gatti" },
+  { categoria: "Altro", nome: "Sacchetti per immondizia grandi" },
+  { categoria: "Altro", nome: "Pile stilo AA" },
 ];
+/* -------------------------------------------------------- */
 
 
 /* -------------- ELEMENTI DOM -------------- */

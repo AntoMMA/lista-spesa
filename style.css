@@ -9,11 +9,10 @@
   --rgb1: 255,0,0;
   --rgb2: 0,255,0;
   --rgb3: 0,0,255;
-  --online-color: #00ff00; /* Verde acceso per online */
-  --offline-color: var(--danger-color); /* Rosso per offline */
+  --online-color: #00ff00; 
+  --offline-color: var(--danger-color); 
   
-  /* Variabile per l'altezza del contenuto dinamico */
-  --content-height: 600px; 
+  --content-height: 700px; /* Altezza di riferimento per i contenuti dinamici */
 }
 
 @keyframes rgb-border {
@@ -69,7 +68,6 @@ h1, h2 { text-align: center; margin: 10px 0; }
     gap: 20px;
 }
 
-/* Stili per l'info utente nel header */
 .user-info {
     text-align: right;
     font-size: 0.9em;
@@ -80,7 +78,7 @@ h1, h2 { text-align: center; margin: 10px 0; }
     gap: 10px;
 }
 
-/* ================== 🟢 SCHERMATA DI ACCESSO (FIXED/CENTERED) 🟢 ================== */
+/* 🟢 SCHERMATA DI ACCESSO */
 .login-gate {
     position: fixed; 
     top: 0; 
@@ -105,13 +103,7 @@ h1, h2 { text-align: center; margin: 10px 0; }
     margin-right: auto;
 }
 
-.login-gate h2 {
-    font-size: 1.8rem;
-    color: var(--primary-color);
-    margin-bottom: 25px;
-}
-
-/* ================== COMPONENTI UI (Input/Button) ================== */
+/* COMPONENTI UI (Input/Button) */
 input[type="text"], input[type="search"], button {
     padding: 10px 15px;
     border-radius: 6px;
@@ -143,35 +135,25 @@ button.button, .login-gate button {
     margin-top: 5px;
     margin-bottom: 0;
 }
-.login-gate button:hover {
-    background-color: #00cc00;
-}
-
-button.button:hover {
-    background-color: #0b9cdb;
-}
-
-button.danger {
-    background-color: var(--danger-color);
-}
-button.danger:hover {
-    background-color: #c43232;
-}
+.login-gate button:hover { background-color: #00cc00; }
+button.button:hover { background-color: #0b9cdb; }
+button.danger { background-color: var(--danger-color); }
+button.danger:hover { background-color: #c43232; }
 
 .catalog, .user-area, .list-area {
     padding: 15px;
     border-radius: 8px;
     background-color: #1e293b;
-    /* Rende i contenitori flex per gestire meglio l'altezza dei loro figli */
     display: flex; 
     flex-direction: column;
+    /* Imposta un'altezza massima al contenitore per gestire lo scorrimento dei figli */
+    max-height: calc(var(--content-height) + 50px);
 }
 
-/* ================== UTENTI ATTIVI ================== */
+/* ================== 👥 UTENTI ATTIVI ================== */
 #activeUsersList {
     list-style: none;
     padding: 0;
-    /* Altezza fissa con scroll per l'area utenti */
     max-height: calc(var(--content-height) / 2); 
     overflow-y: auto;
     margin-top: 0;
@@ -210,36 +192,64 @@ button.danger:hover {
     opacity: 0.5;
 }
 
-/* ================== CATALOGO (Con Scroll) ================== */
-.catalog {
-    /* Necessario per contenere gli elementi e il manuale */
-    justify-content: space-between;
+/* ================== 🛍️ CATALOGO (Ricerca Fissa e Scroll Funzionante) ================== */
+
+/* Contenitore della ricerca: FISSO */
+.search-container {
+    position: sticky;
+    top: 0; 
+    z-index: 10; 
+    background-color: #1e293b; 
+    padding: 5px 0 10px 0; 
+    /* Estendi per coprire l'imbottitura del .catalog */
+    margin: -15px -15px 0 -15px; 
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+    padding-left: 15px;
+    padding-right: 15px;
+    box-sizing: border-box;
+}
+
+#searchInput {
+    width: 100%;
+    margin-bottom: 0; 
 }
 
 .catalog-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    /* L'altezza dinamica per lo scroll (sottrai search e input manuale) */
-    max-height: calc(var(--content-height) - 130px); 
-    overflow-y: auto;
+    /* ABILITA LO SCORRIMENTO INTERNO */
+    flex-grow: 1; 
+    overflow-y: auto; 
     padding: 5px;
-    margin-bottom: 10px;
+    margin-top: 5px;
+    /* NUOVA GRIGLIA A 2 COLONNE */
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 10px; 
 }
 
+/* Rendi la categoria a piena larghezza */
+.catalog-category {
+    grid-column: 1 / 3; 
+    text-align: left;
+    margin: 15px 0 5px 0;
+    font-size: 1.1em;
+    color: var(--primary-color);
+}
+
+/* Item del catalogo a larghezza intera della colonna */
 .catalog-item {
     display: flex;
-    flex-direction: column;
+    flex-direction: row; 
     align-items: center;
-    justify-content: center;
-    width: 80px; 
-    height: 80px;
-    padding: 5px;
+    justify-content: flex-start; 
+    width: 100%; 
+    height: auto; 
+    padding: 10px;
     border: 1px solid #475569;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    text-align: center;
-    font-size: 0.8em;
+    text-align: left;
+    font-size: 0.9em;
     transition: background-color 0.1s;
     flex-shrink: 0;
 }
@@ -248,26 +258,23 @@ button.danger:hover {
     background-color: #2c3e50;
 }
 
-.catalog-category {
-    flex-basis: 100%;
-    text-align: left;
-    margin: 15px 0 5px 0;
-    font-size: 1.1em;
-    color: var(--primary-color);
-}
-
 .product-photo {
-    width: 50px;
-    height: 50px;
+    width: 40px; 
+    height: 40px;
+    margin-right: 10px; 
     border-radius: 50%;
     object-fit: cover;
-    margin-bottom: 3px;
+}
+
+.catalog-item span {
+    flex-grow: 1; 
+    font-weight: bold;
 }
 
 .add-manual {
     display: flex;
     gap: 10px;
-    margin-top: 10px; /* Riduci margine se in fondo al catalogo */
+    margin-top: 10px; 
 }
 .add-manual input {
     flex-grow: 1;
@@ -278,9 +285,8 @@ button.danger:hover {
 }
 
 
-/* ================== LISTA SPESA (Con Scroll) ================== */
+/* ================== 📋 LISTA SPESA (Con Scroll) ================== */
 .list-area {
-    /* Deve permettere alla lista interna di usare l'altezza massima */
     justify-content: flex-start;
 }
 
@@ -365,13 +371,12 @@ ul#shoppingItems li .left {
     padding-top: 15px;
 }
 
-/* Stili per le liste salvate (Aggiunto scroll) */
 #savedLists {
     display: flex;
     flex-direction: column;
     gap: 8px;
     padding: 10px 0;
-    max-height: 150px; /* Altezza fissa per lo scroll */
+    max-height: 150px; 
     overflow-y: auto;
 }
 
@@ -383,10 +388,11 @@ ul#shoppingItems li .left {
     border: 1px dashed #475569;
     border-radius: 4px;
     background-color: #2c3e50;
-    flex-shrink: 0; /* Previene il restringimento in caso di overscroll */
+    flex-shrink: 0; 
 }
 
-/* ================== MEDIA QUERY (Reattività Totale) ================== */
+
+/* ================== MEDIA QUERY (Reattività) ================== */
 
 @media (max-width: 1000px) {
     .app {
@@ -394,35 +400,18 @@ ul#shoppingItems li .left {
         max-width: 90%;
         gap: 15px;
     }
-    .app-header {
-        grid-column: 1 / 3; 
-    }
-    .content {
-        grid-template-columns: subgrid;
-    }
-    .catalog {
-        grid-column: 1 / 2; 
-    }
-    .list-area {
-        grid-column: 2 / 3; 
-    }
+    .app-header { grid-column: 1 / 3; }
+    .content { grid-template-columns: subgrid; }
+    .catalog { grid-column: 1 / 2; }
+    .list-area { grid-column: 2 / 3; }
     .user-area {
         grid-column: 1 / 3; 
-        /* Riduci l'altezza utente in mobile */
         max-height: 200px;
         overflow-y: auto;
     }
-    #activeUsersList {
-        max-height: none; 
-    }
-    .catalog-list {
-        /* Adatta l'altezza massima per i tablet */
-        max-height: 450px;
-    }
-    ul#shoppingItems {
-        /* Adatta l'altezza massima per i tablet */
-        max-height: 450px;
-    }
+    #activeUsersList { max-height: none; }
+    .catalog-list { max-height: 450px; }
+    ul#shoppingItems { max-height: 450px; }
 }
 
 @media (max-width: 600px) {
@@ -434,19 +423,12 @@ ul#shoppingItems li .left {
         border-radius: 0;
     }
     
-    .content {
-         grid-template-columns: 1fr;
-    }
+    .content { grid-template-columns: 1fr; }
 
-    .app-header, .catalog, .list-area, .user-area {
-        grid-column: 1 / 2;
-    }
+    .app-header, .catalog, .list-area, .user-area { grid-column: 1 / 2; }
     
-    /* Disabilita le altezze fisse in mobile, lascia solo lo scroll */
-    .catalog-list, ul#shoppingItems {
-        max-height: 350px; 
-    }
-
+    .catalog-list, ul#shoppingItems { max-height: 350px; }
+    
     .list-controls {
         flex-direction: column; 
         align-items: stretch;
@@ -457,7 +439,13 @@ ul#shoppingItems li .left {
         margin-top: 10px;
     }
     
-    .bottom-actions {
-        flex-direction: column;
+    .bottom-actions { flex-direction: column; }
+    
+    /* In mobile, usa una colonna singola nel catalogo */
+    .catalog-list {
+        grid-template-columns: 1fr; 
+    }
+    .catalog-category {
+        grid-column: 1 / 2; 
     }
 }

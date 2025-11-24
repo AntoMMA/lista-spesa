@@ -1,91 +1,94 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Lista Spesa — 2025/2026</title>
-<link rel="stylesheet" href="style.css" />
-
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Spesa Condivisa - Realtime</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
 
-<div id="loginGate" class="login-gate" style="display:none;">
-  <h2>Accedi alla Lista Condivisa</h2>
-  <input type="text" id="inputFirstName" placeholder="Nome" required>
-  <input type="text" id="inputLastName" placeholder="Cognome" required>
-  <button id="loginButton">Accedi</button>
-</div>
-
-<main class="app rainbow-border" id="mainApp" style="display:none;">
-  <header class="app-header">
-    <h1>Lista Spesa — 2025/2026</h1>
-    <p class="subtitle">Tocca un prodotto per aggiungerlo.
-Cerca, salva, scarica o condividi.</p>
-    <div class="user-info">
-        <span id="loggedInUser">Offline</span>
-        <button id="logoutButton" class="button danger">Esci</button>
+    <div class="login-gate" id="loginGate">
+        <div class="rainbow-border" style="padding: 20px; border-radius: 10px;">
+            <h2>Accedi alla Lista Spesa</h2>
+            <input type="text" id="inputFirstName" placeholder="Nome">
+            <input type="text" id="inputLastName" placeholder="Cognome">
+            <button class="button" id="loginButton">Accedi / Registrati</button>
+            <p class="subtitle" style="margin-top: 20px;">I tuoi dati verranno salvati per la sincronizzazione.</p>
+        </div>
     </div>
-  </header>
 
-  <section class="content">
-    <aside class="catalog">
-      <div class="searchbox">
-        <input id="searchInput" type="search" placeholder="Cerca prodotto o categoria..." />
-      </div>
+    <div class="app" id="mainApp" style="display: none;">
 
-      <div class="catalog-list" id="catalogList"></div>
-
-      <div class="add-manual">
-        <input id="manualInput" type="text" placeholder="Aggiungi articolo manuale..." />
-        <button id="addManualBtn">Aggiungi</button>
-      </div>
-    </aside>
-
-    <section class="list-area">
-     
-     <div class="list-controls">
-        <div class="counts">
-          <span id="itemCount">0</span> articoli
+        <div class="app-header">
+            <h1>App Lista Spesa Condivisa</h1>
+            <div class="user-info">
+                <span>Utente: <strong id="loggedInUser"></strong></span>
+                <button class="button danger" id="logoutButton">Esci</button>
+            </div>
         </div>
-        <div class="actions">
-          <button id="loadBtn" class="button">📂 Carica Liste</button>
-          <button id="saveBtn" class="button">💾 Salva su Firestore</button>
+        
+        <div class="content">
+
+            <div class="catalog">
+                <h2>Catalogo Prodotti</h2>
+                
+                <div class="search-container">
+                    <input type="search" id="searchInput" placeholder="🔍 Cerca prodotto o categoria...">
+                </div>
+                
+                <div class="catalog-list" id="catalogList">
+                    </div>
+                
+                <div class="add-manual">
+                    <input type="text" id="manualInput" placeholder="Aggiungi item manuale">
+                    <button class="button" id="addManualBtn">Aggiungi</button>
+                </div>
+            </div>
+
+            <div class="list-area">
+                <h2>Lista Attuale <small>(<span id="itemCount">0</span> items)</small></h2>
+
+                <div class="list-controls">
+                    <span>Funzioni Lista:</span>
+                    <div class="actions">
+                        <button class="button danger" id="clearBtn">Svuota Lista</button>
+                        <button class="button" id="saveBtn">Salva Lista</button>
+                    </div>
+                </div>
+
+                <ul id="shoppingItems">
+                    </ul>
+
+                <h3>Liste Salvate <button class="button" id="loadBtn">Ricarica Liste</button></h3>
+                <div id="savedLists">
+                    </div>
+
+                <div class="bottom-actions">
+                    <button class="button" id="downloadBtn">Scarica PDF</button>
+                    <button class="button" id="shareBtn">Condividi</button>
+                </div>
+
+                <div id="pdfNoteContainer" style="display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px;">
+                    <p class="subtitle" style="margin-bottom: 5px;">Aggiungi una nota al PDF/Condivisione:</p>
+                    <input type="text" id="pdfNoteInput" placeholder="Esempio: Non dimenticare il gelato!">
+                    <button class="button" id="pdfNoteConfirmBtn">Conferma Azione</button>
+                </div>
+
+            </div>
+
+            <div class="user-area">
+                <h2>Utenti Registrati</h2>
+                <ul id="activeUsersList">
+                    </ul>
+            </div>
         </div>
-      </div>
+    </div>
 
-      <ul id="shoppingItems" class="shopping-list"></ul>
-
-      <div id="pdfNoteContainer" style="display:none; 
-margin-bottom:10px;">
-        <input type="text" id="pdfNoteInput" placeholder="Inserisci testo da aggiungere in cima al PDF..." class="input-full-width">
-        <button class="button" id="pdfNoteConfirmBtn">Conferma</button>
-      </div>
-
-      <div class="bottom-actions">
-        <button id="downloadBtn" class="button">📄 Scarica PDF</button>
-        <button id="shareBtn" class="button">📨 Condividi PDF</button>
-        <button id="clearBtn" class="button danger">🧹 Pulisci</button>
-      </div>
-      
-      <h2>Liste Salvate</h2>
-   
-     <div id="savedLists" class="saved-lists"></div>
-    </section>
-    
-    <aside class="user-area">
-      <h2>Utenti Attivi</h2>
-      <ul id="activeUsersList">
-        <li style="color: var(--muted-color);">In attesa di accesso...</li>
-      </ul>
-    </aside>
-  </section>
-</main>
-
-<script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

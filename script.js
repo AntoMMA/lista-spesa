@@ -74,15 +74,17 @@ function generateUUID() {
 function initializeApp() {
     if (CURRENT_USER_ID) {
         loginGateEl.style.display = 'none';
-        mainAppEl.style.display = 'grid';
+        mainAppEl.style.display = 'grid'; // Usa 'grid' come definito nel CSS per il layout desktop
         loggedInUserEl.textContent = `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`;
 
+        // Avvio dei listener Realtime
         listenToActiveUsers();
         listenToActiveList();
         
+        // Imposta l'utente come offline quando si disconnette
         dbRT.ref('active_users/' + CURRENT_USER_ID).onDisconnect().remove();
     } else {
-        loginGateEl.style.display = 'flex';
+        loginGateEl.style.display = 'flex'; // Centrato via Flexbox nel CSS
         mainAppEl.style.display = 'none';
         loggedInUserEl.textContent = "Offline";
     }
@@ -142,6 +144,7 @@ function handleLogout() {
     CURRENT_USER_DATA = { firstName: "", lastName: "" };
     localStorage.removeItem("user_unique_id");
     
+    // Aggiorna la vista
     loginGateEl.style.display = 'flex';
     mainAppEl.style.display = 'none';
     loggedInUserEl.textContent = "Offline";
@@ -156,7 +159,8 @@ function renderCatalog() {
 
     catalogo.forEach(item => {
         if (item.categoria !== currentCategory) {
-            html += `<h3>${item.categoria}</h3>`;
+            // Usa h3 o un div con classe .catalog-category per lo stile
+            html += `<h3 class="catalog-category">${item.categoria}</h3>`;
             currentCategory = item.categoria;
         }
         html += `<div class="catalog-item" data-name="${item.nome}" data-img-url="${item.imgUrl}">
@@ -199,6 +203,7 @@ function renderShopping() {
 
 function syncShoppingList() {
     if (CURRENT_USER_ID) {
+        // Aggiorna solo se loggato
         dbRT.ref('active_list/').set(shopping)
             .catch(error => console.error("Errore sincronizzazione Realtime:", error));
     }
@@ -209,7 +214,7 @@ function addItem(name, imgUrl) {
 
     if (existingItem) {
         existingItem.qty += 1;
-        existingItem.done = false;
+        existingItem.done = false; // Riattiva l'articolo se viene aggiunto di nuovo
     } else {
         shopping.push({
             nome: name,
@@ -243,7 +248,10 @@ function handleListClick(e) {
         case 'delete':
             if (confirm(`Sei sicuro di voler eliminare "${item.nome}"?`)) { shopping.splice(itemIndex, 1); }
             break;
-        case 'toggle-done': item.done = !item.done; break;
+        case 'toggle-done': 
+            // La checkbox inverte lo stato, l'HTML aggiornerà 'item.done'
+            item.done = target.checked; 
+            break;
     }
     
     renderShopping();
@@ -280,6 +288,7 @@ async function saveList() {
 
 async function loadLists() {
     try {
+        // Carica le 10 liste più recenti
         const snapshot = await db.collection("liste_salvate").orderBy("createdAt", "desc").limit(10).get();
         let html = '';
 
@@ -326,9 +335,6 @@ function downloadStyledPDF() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const doneItems = shopping.filter(i => i.done);
     const pendingItems = shopping.filter(i => !i.done);
-    
-    // Generazione PDF omessa per brevità, ma inclusa nel codice fornito sopra
-    // ... (Logica PDF completa) ...
     
     // Intestazione
     doc.setFontSize(18);
@@ -396,6 +402,7 @@ function sharePDF() {
         navigator.share(shareData)
             .catch((error) => {
                 console.error('Errore durante la condivisione:', error);
+                // Fallback in caso di errore (es. annullamento utente)
                 downloadStyledPDF(); 
             });
     } else {
@@ -410,25 +417,69 @@ function sharePDF() {
 
 
 /* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
-// Queste funzioni sono la "connessione alla rete" che hai richiesto, implementate con gestione errori.
 
-function listenToActiveUsers() {
+// NUOVA FUNZIONE: Recupera tutti gli utenti registrati da Firestore
+async function fetchAllRegisteredUsers() {
+    try {
+        const snapshot = await db.collection(USER_COLLECTION_NAME).get();
+        const users = {};
+        snapshot.forEach(doc => {
+            // Mappa l'ID del documento per un facile lookup
+            users[doc.id] = { ...doc.data(), id: doc.id };
+        });
+        return users;
+    } catch (error) {
+        console.error("Errore nel recupero di tutti gli utenti registrati:", error);
+        return {};
+    }
+}
+
+// MODIFICATA: Ascolta gli utenti attivi e li combina con tutti gli utenti per mostrare lo stato
+async function listenToActiveUsers() {
+    if (!CURRENT_USER_ID) return; 
+
+    // 1. Ottiene la lista completa degli utenti registrati (da Firestore)
+    const allUsers = await fetchAllRegisteredUsers();
+    
+    // 2. Ascolta gli utenti attivi (da Realtime DB)
     dbRT.ref('active_users/').on('value', (snapshot) => {
-        const users = snapshot.val();
+        const activeUsers = snapshot.val() || {};
+        
+        // 3. Combina le liste e determina lo stato per TUTTI gli utenti
+        const finalUsersList = Object.values(allUsers).map(user => {
+            // Verifica se l'ID utente è presente nella lista activeUsers (Realtime DB)
+            const isActive = activeUsers.hasOwnProperty(user.id); 
+            
+            return {
+                ...user,
+                isOnline: isActive
+            };
+        }).sort((a, b) => {
+             // Ordina: Online prima, poi alfabeticamente per nome
+            if (a.isOnline === b.isOnline) {
+                return a.firstName.localeCompare(b.firstName);
+            }
+            return a.isOnline ? -1 : 1;
+        });
+
+        // 4. Renderizza la lista combinata con i pallini
         let html = '';
-        if (users) {
-            Object.keys(users).forEach(id => {
-                const user = users[id];
-                const isMe = id === CURRENT_USER_ID;
+        if (finalUsersList.length > 0) {
+            finalUsersList.forEach(user => {
+                const isMe = user.id === CURRENT_USER_ID;
+                // Usa le classi CSS definite (status-indicator, status-online/offline)
+                const statusClass = user.isOnline ? 'status-online' : 'status-offline';
+                
                 html += `<li class="${isMe ? 'me' : ''}">
                             ${user.firstName} ${user.lastName} 
-                            <span class="online-indicator"></span>
+                            <span class="status-indicator ${statusClass}"></span>
                         </li>`;
             });
         } else {
-            html = '<li>Nessun altro utente attivo.</li>';
+            html = '<li>Nessun utente registrato.</li>';
         }
         activeUsersListEl.innerHTML = html;
+        
     }, (error) => {
         console.error("Errore Realtime DB (utenti):", error);
         activeUsersListEl.innerHTML = `<li class="error-msg">❌ Errore di connessione: ${error.code}</li>`;
@@ -438,6 +489,7 @@ function listenToActiveUsers() {
 function listenToActiveList() {
     dbRT.ref('active_list/').on('value', (snapshot) => {
         const remoteList = snapshot.val();
+        // Previene il loop di sincronizzazione se la lista locale è identica a quella remota
         if (JSON.stringify(remoteList) !== JSON.stringify(shopping)) {
             shopping = remoteList || [];
             renderShopping();
@@ -533,7 +585,7 @@ function addAllEventListeners() {
         actionPending = '';
     });
     
-    // EVENTI LISTE SALVATE e LOGIN/LOGOUT (Omessi per brevità, sono inclusi nel file completo)
+    // EVENTI LISTE SALVATE 
     savedListsEl.addEventListener("click", async (e) => {
         const target = e.target;
         const action = target.dataset.action;
@@ -560,6 +612,7 @@ function addAllEventListeners() {
         }
     });
 
+    // EVENTI LOGIN/LOGOUT
     loginButtonEl.addEventListener("click", handleLogin);
     inputLastNameEl.addEventListener("keypress", (e) => {
         if (e.key === 'Enter') handleLogin();
@@ -579,7 +632,6 @@ async function checkLoginStatus() {
                 handleLogout(); 
             }
         } catch (err) {
-            // FUNZIONE CONNESSIONE ALLA RETE: Gestisce l'errore se Firebase non è raggiungibile
             console.error("Errore nel recupero dati utente (Firestore/Network):", err);
             alert("Errore di rete o di connessione al database. Riprova più tardi.");
             handleLogout(); 

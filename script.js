@@ -526,7 +526,105 @@ async function loadLists() {
   }
 }
 
-// ... (Includi qui le funzioni downloadStyledPDF e sharePDF)
+/* -------------- FUNZIONI PDF e CONDIVISIONE (AGGIUNTE) -------------- */
+
+function downloadStyledPDF() {
+    // 1. Inizializza jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Configurazione del layout
+    let y = 15; // Posizione Y iniziale
+    const margin = 10;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const doneItems = shopping.filter(i => i.done);
+    const pendingItems = shopping.filter(i => !i.done);
+    
+    // --- Intestazione ---
+    doc.setFontSize(18);
+    doc.text("Lista Spesa Condivisa", pageWidth / 2, y, { align: "center" });
+    y += 8;
+    
+    // --- Nota personalizzata ---
+    if (pdfNote) {
+        doc.setFontSize(10);
+        doc.setTextColor(150, 150, 150); // Grigio
+        const noteLines = doc.splitTextToSize(`Nota: ${pdfNote}`, pageWidth - 2 * margin);
+        doc.text(noteLines, pageWidth / 2, y, { align: "center" });
+        y += noteLines.length * 5 + 5;
+    }
+    
+    // --- Titolo Articoli da fare ---
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0); // Nero
+    doc.text("Articoli da Acquistare:", margin, y);
+    y += 7;
+    
+    // --- Lista Articoli Pendenti ---
+    doc.setFontSize(12);
+    pendingItems.forEach(item => {
+        const text = `[ ] ${item.nome} (${item.qty} ${item.qty > 1 ? 'unità' : 'unità'})`;
+        doc.text(text, margin + 5, y);
+        y += 7;
+    });
+    
+    // --- Titolo Articoli Fatti ---
+    if (doneItems.length > 0) {
+        y += 10;
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Articoli Già Acquistati:", margin, y);
+        y += 7;
+        
+        // --- Lista Articoli Fatti ---
+        doc.setFontSize(12);
+        doc.setTextColor(150, 150, 150); // Grigio per gli articoli completati
+        doneItems.forEach(item => {
+            const text = `[X] ${item.nome} (${item.qty} ${item.qty > 1 ? 'unità' : 'unità'})`;
+            doc.text(text, margin + 5, y);
+            y += 7;
+        });
+    }
+
+    // 2. Esegui il download
+    doc.save("ListaSpesa.pdf");
+    pdfNote = ""; // Pulisci la nota dopo il download
+    pdfNoteInput.value = "";
+}
+
+function sharePDF() {
+    // 1. Chiama la funzione di download per generare il PDF
+    downloadStyledPDF(); 
+    // Nota: Il download avviene localmente. L'API Web Share richiede un URL del file.
+    // L'unica possibilità è condividere un link al PDF se fosse su un server,
+    // o semplicemente condividere il testo della lista, come fallback.
+
+    const listText = shopping.map(item => 
+        `[${item.done ? 'X' : ' '}] ${item.nome} (Qta: ${item.qty})`
+    ).join('\n');
+
+    const shareData = {
+        title: 'Lista Spesa',
+        text: `Ecco la nostra lista della spesa:\n\n${pdfNote ? `Nota: ${pdfNote}\n\n` : ''}${listText}`,
+    };
+
+    // 2. Usa l'API Web Share
+    if (navigator.share) {
+        navigator.share(shareData)
+            .then(() => console.log('Contenuto della lista condiviso con successo.'))
+            .catch((error) => console.error('Errore durante la condivisione', error));
+    } else {
+        // Fallback per browser non supportati
+        alert("L'API di condivisione non è supportata dal tuo browser. Copia il testo:\n\n" + shareData.text);
+    }
+    
+    pdfNote = ""; // Pulisci la nota dopo la condivisione
+    pdfNoteInput.value = "";
+}
+// Ho incluso la funzione downloadStyledPDF qui sopra per farla funzionare, 
+// ma la devi anche rimuovere da dove l'ho messa in questo commento e 
+// metterla nel file script.js in una zona appropriata.
+
 
 /* -------------- INIZIALIZZAZIONE -------------- */
 

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Lista Spesa — Condivisa</title>
+<title>Lista Spesa — 2025/2026</title>
 <link rel="stylesheet" href="style.css" />
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
@@ -24,60 +24,62 @@
 <main class="app rainbow-border" id="mainApp" style="display:none;">
   <header class="app-header">
     <h1>Lista Spesa — 2025/2026</h1>
-    <p class="subtitle">Tocca un prodotto per aggiungerlo. Cerca, salva, condividi!</p>
-    <div class="user-info">
-      <span class="muted-small">Utente:</span> 
-      <strong id="loggedInUser">Offline</strong>
-      <button id="logoutButton" class="button-small danger">Esci</button>
-    </div>
+    <p class="subtitle">Tocca un prodotto per aggiungerlo.
+Cerca, salva, scarica o condividi.</p>
   </header>
 
-  <aside class="catalog-area">
-    <h2>Catalogo Prodotti</h2>
-    <div id="catalog" class="catalog-grid">
+  <section class="content">
+    <aside class="catalog">
+      <div class="searchbox">
+        <input id="searchInput" type="search" placeholder="Cerca prodotto o categoria..." />
       </div>
-    
-    <div class="manual-add">
-      <input id="addManualInput" type="text" placeholder="Aggiungi articolo manuale..." />
-      <button id="addManualBtn">Aggiungi</button>
-    </div>
-  </aside>
 
-  <section class="list-area">
+      <div class="catalog-list" id="catalogList"></div>
+
+      <div class="add-manual">
+        <input id="manualInput" type="text" placeholder="Aggiungi articolo manuale..." />
+        <button id="addManualBtn">Aggiungi</button>
+      </div>
+    </aside>
+
+    <section class="list-area">
+     
+     <div class="list-controls">
+        <div class="counts">
+          <span id="itemCount">0</span> articoli
+        </div>
+        <div class="actions">
+          <button id="loadBtn" class="button">📂 Carica Liste</button>
+          <button id="saveBtn" class="button">💾 Salva su Firestore</button>
+        </div>
+      </div>
+
+      <ul id="shoppingItems" class="shopping-list"></ul>
+
+      <div id="pdfNoteContainer" style="display:none; 
+margin-bottom:10px;">
+        <input type="text" id="pdfNoteInput" placeholder="Inserisci testo da aggiungere in cima al PDF..." class="input-full-width">
+        <button class="button" id="pdfNoteConfirmBtn">Conferma</button>
+      </div>
+
+      <div class="bottom-actions">
+        <button id="downloadBtn" class="button">📄 Scarica PDF</button>
+        <button id="shareBtn" class="button">📨 Condividi PDF</button>
+        <button id="clearBtn" class="button danger">🧹 Pulisci</button>
+      </div>
+      
+      <h2>Liste Salvate</h2>
    
-    <div class="list-controls">
-      <div class="counts">
-        <span id="itemCount">0</span> articoli
-      </div>
-      <div class="actions">
-        <button id="loadBtn" class="button">📂 Carica Liste</button>
-        <button id="saveBtn" class="button">💾 Salva su Cloud</button>
-      </div>
-    </div>
-
-    <ul id="shoppingItems" class="shopping-list"></ul>
-
-    <div id="pdfNoteContainer" style="display:none; margin-bottom:10px;">
-      <input type="text" id="pdfNoteInput" placeholder="Inserisci testo da aggiungere in cima al PDF..." class="input-full-width">
-      <button class="button" id="pdfNoteConfirmBtn">Conferma Nota</button>
-    </div>
-
-    <div class="bottom-actions">
-      <button id="downloadBtn" class="button">📄 Scarica PDF</button>
-      <button id="shareBtn" class="button">📨 Condividi</button>
-      <button id="clearBtn" class="button danger">🧹 Pulisci</button>
-    </div>
+     <div id="savedLists" class="saved-lists"></div>
+    </section>
     
-    <h2>Liste Salvate</h2>
-   
-    <div id="savedLists" class="saved-lists"></div>
-  </section>
-  
-  <aside class="user-area">
-    <h2>Utenti Attivi</h2>
-    <ul id="activeUsersList">
+    <aside class="user-area">
+      <h2>Utenti Attivi</h2>
+      <ul id="activeUsersList">
+        <li style="color: var(--muted-color);">In attesa di accesso...</li>
       </ul>
-  </aside>
+    </aside>
+  </section>
 </main>
 
 <script src="script.js"></script>

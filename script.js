@@ -1,6 +1,6 @@
 /* -------------- FIREBASE CONFIG (LA TUA) -------------- */
 const firebaseConfig = {
-  apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVU0xYyP0",
+  apiKey: "AIzaSyCPHLvSRBt40Wloa0nnnAp5LVdUIOb9J40",
   authDomain: "lista-spesa-db7f7.firebaseapp.com",
   projectId: "lista-spesa-db7f7",
   storageBucket: "lista-spesa-db7f7.firebasestorage.app",
@@ -10,15 +10,13 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-// NUOVA INIZIALIZZAZIONE PER REALTIME DATABASE
 const dbRT = firebase.database(); 
 
 // GESTIONE ID LOCALE E INFORMAZIONI UTENTE
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
-const USER_COLLECTION_NAME = "registered_users"; // Collezione in Firestore per salvare i nomi
+const USER_COLLECTION_NAME = "registered_users"; 
 
-// Funzione per generare un ID univoco (UUID)
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
         const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -29,8 +27,14 @@ function generateUUID() {
 
 async function saveCatalogFirestore() {
   try {
-    // Ordina il catalogo prima di salvarlo per mantenere l'ordine
-    const sortedCatalogo = catalogo.sort((a, b) => a.nome.localeCompare(b.nome));
+    // Il catalogo deve essere salvato, ma prima puliamo l'imgUrl per i nuovi elementi manuali
+    const cleanedCatalogo = catalogo.map(item => {
+        const { imgUrl, ...rest } = item;
+        // Non salviamo l'imgUrl nel caso di aggiunte manuali (così la prossima volta non avranno un URL casuale)
+        return imgUrl ? item : rest;
+    });
+    
+    const sortedCatalogo = cleanedCatalogo.sort((a, b) => a.nome.localeCompare(b.nome));
     await db.collection("catalogo").doc("prodotti").set({ items: sortedCatalogo });
     console.log("Catalogo aggiornato su Firestore");
   } catch (err) {
@@ -38,139 +42,142 @@ async function saveCatalogFirestore() {
   }
 }
 
-/* -------------- CATALOGO PREIMPOSTATO AMPLIATO -------------- */
+
+/* -------------- CATALOGO PREIMPOSTATO AMPLIATO E CON IMMAGINI (Placeholder) -------------- */
+// ⚠️ SOSTITUISCI QUESTI URL CON I LINK ALLE TUE IMMAGINI REALI! 
+// Ho usato 'https://picsum.photos/seed/[parola chiave]/50/50' per immagini realistiche di esempio.
 const catalogo = [
   // --- FRUTTA E VERDURA ---
-  { categoria: "Frutta fresca", nome: "Mele Golden" },
-  { categoria: "Frutta fresca", nome: "Banane" },
-  { categoria: "Frutta fresca", nome: "Arance da tavola" },
-  { categoria: "Frutta fresca", nome: "Uva bianca" },
-  { categoria: "Frutta fresca", nome: "Fragole" },
-  { categoria: "Frutta fresca", nome: "Limoni" },
-  { categoria: "Frutta fresca", nome: "Kiwi" },
+  { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://picsum.photos/seed/mela/50/50" },
+  { categoria: "Frutta fresca", nome: "Banane", imgUrl: "https://picsum.photos/seed/banana/50/50" },
+  { categoria: "Frutta fresca", nome: "Arance da tavola", imgUrl: "https://picsum.photos/seed/arancia/50/50" },
+  { categoria: "Frutta fresca", nome: "Uva bianca", imgUrl: "https://picsum.photos/seed/uva/50/50" },
+  { categoria: "Frutta fresca", nome: "Fragole", imgUrl: "https://picsum.photos/seed/fragola/50/50" },
+  { categoria: "Frutta fresca", nome: "Limoni", imgUrl: "https://picsum.photos/seed/limone/50/50" },
+  { categoria: "Frutta fresca", nome: "Kiwi", imgUrl: "https://picsum.photos/seed/kiwi/50/50" },
 
-  { categoria: "Verdura a foglia", nome: "Insalata iceberg" },
-  { categoria: "Verdura a foglia", nome: "Spinaci freschi" },
-  { categoria: "Verdura a foglia", nome: "Rucola" },
-  { categoria: "Verdura base", nome: "Pomodori ramati" },
-  { categoria: "Verdura base", nome: "Zucchine" },
-  { categoria: "Verdura base", nome: "Carote" },
-  { categoria: "Verdura base", nome: "Cetrioli" },
-  { categoria: "Verdura base", nome: "Peperoni gialli" },
-  { categoria: "Verdura base", nome: "Cipolle dorate" },
-  { categoria: "Verdura base", nome: "Aglio" },
-  { categoria: "Verdura base", nome: "Patate a pasta gialla" },
-  { categoria: "Verdura base", nome: "Melanzane" },
+  { categoria: "Verdura a foglia", nome: "Insalata iceberg", imgUrl: "https://picsum.photos/seed/insalata/50/50" },
+  { categoria: "Verdura a foglia", nome: "Spinaci freschi", imgUrl: "https://picsum.photos/seed/spinaci/50/50" },
+  { categoria: "Verdura a foglia", nome: "Rucola", imgUrl: "https://picsum.photos/seed/rucola/50/50" },
+  { categoria: "Verdura base", nome: "Pomodori ramati", imgUrl: "https://picsum.photos/seed/pomodori/50/50" },
+  { categoria: "Verdura base", nome: "Zucchine", imgUrl: "https://picsum.photos/seed/zucchine/50/50" },
+  { categoria: "Verdura base", nome: "Carote", imgUrl: "https://picsum.photos/seed/carote/50/50" },
+  { categoria: "Verdura base", nome: "Cetrioli", imgUrl: "https://picsum.photos/seed/cetrioli/50/50" },
+  { categoria: "Verdura base", nome: "Peperoni gialli", imgUrl: "https://picsum.photos/seed/peperoni/50/50" },
+  { categoria: "Verdura base", nome: "Cipolle dorate", imgUrl: "https://picsum.photos/seed/cipolle/50/50" },
+  { categoria: "Verdura base", nome: "Aglio", imgUrl: "https://picsum.photos/seed/aglio/50/50" },
+  { categoria: "Verdura base", nome: "Patate a pasta gialla", imgUrl: "https://picsum.photos/seed/patate/50/50" },
+  { categoria: "Verdura base", nome: "Melanzane", imgUrl: "https://picsum.photos/seed/melanzane/50/50" },
 
   // --- PANETTERIA E CEREALI ---
-  { categoria: "Pane fresco", nome: "Pane casereccio" },
-  { categoria: "Pane fresco", nome: "Baguette" },
-  { categoria: "Pane fresco", nome: "Fette biscottate integrali" },
-  { categoria: "Cereali colazione", nome: "Fiocchi d'avena" },
-  { categoria: "Cereali colazione", nome: "Muesli" },
-  { categoria: "Prodotti da forno", nome: "Grissini" },
-  { categoria: "Prodotti da forno", nome: "Crackers salati" },
+  { categoria: "Pane fresco", nome: "Pane casereccio", imgUrl: "https://picsum.photos/seed/pane/50/50" },
+  { categoria: "Pane fresco", nome: "Baguette", imgUrl: "https://picsum.photos/seed/baguette/50/50" },
+  { categoria: "Pane fresco", nome: "Fette biscottate integrali", imgUrl: "https://picsum.photos/seed/fette/50/50" },
+  { categoria: "Cereali colazione", nome: "Fiocchi d'avena", imgUrl: "https://picsum.photos/seed/avena/50/50" },
+  { categoria: "Cereali colazione", nome: "Muesli", imgUrl: "https://picsum.photos/seed/muesli/50/50" },
+  { categoria: "Prodotti da forno", nome: "Grissini", imgUrl: "https://picsum.photos/seed/grissini/50/50" },
+  { categoria: "Prodotti da forno", nome: "Crackers salati", imgUrl: "https://picsum.photos/seed/crackers/50/50" },
 
   // --- LATTICINI E UOVA ---
-  { categoria: "Latte e Panna", nome: "Latte intero UHT" },
-  { categoria: "Latte e Panna", nome: "Latte parzialmente scremato" },
-  { categoria: "Latte e Panna", nome: "Panna fresca" },
-  { categoria: "Latte e Panna", nome: "Panna da cucina" },
-  { categoria: "Yogurt", nome: "Yogurt bianco naturale" },
-  { categoria: "Yogurt", nome: "Yogurt alla frutta" },
-  { categoria: "Uova", nome: "Uova fresche grandi (conf. 6)" },
+  { categoria: "Latte e Panna", nome: "Latte intero UHT", imgUrl: "https://picsum.photos/seed/latte/50/50" },
+  { categoria: "Latte e Panna", nome: "Latte parzialmente scremato", imgUrl: "https://picsum.photos/seed/latte-scremato/50/50" },
+  { categoria: "Latte e Panna", nome: "Panna fresca", imgUrl: "https://picsum.photos/seed/panna/50/50" },
+  { categoria: "Latte e Panna", nome: "Panna da cucina", imgUrl: "https://picsum.photos/seed/panna-cucina/50/50" },
+  { categoria: "Yogurt", nome: "Yogurt bianco naturale", imgUrl: "https://picsum.photos/seed/yogurt/50/50" },
+  { categoria: "Yogurt", nome: "Yogurt alla frutta", imgUrl: "https://picsum.photos/seed/yogurt-frutta/50/50" },
+  { categoria: "Uova", nome: "Uova fresche grandi (conf. 6)", imgUrl: "https://picsum.photos/seed/uova/50/50" },
   
   // --- FORMAGGI E BURRO ---
-  { categoria: "Formaggi freschi", nome: "Mozzarella di bufala" },
-  { categoria: "Formaggi freschi", nome: "Ricotta fresca" },
-  { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato" },
-  { categoria: "Formaggi stagionati", nome: "Emmentaler a fette" },
-  { categoria: "Formaggi stagionati", nome: "Gorgonzola piccante" },
-  { categoria: "Burro e Margarina", nome: "Burro tradizionale" },
-  { categoria: "Burro e Margarina", nome: "Margarina vegetale" },
+  { categoria: "Formaggi freschi", nome: "Mozzarella di bufala", imgUrl: "https://picsum.photos/seed/mozzarella/50/50" },
+  { categoria: "Formaggi freschi", nome: "Ricotta fresca", imgUrl: "https://picsum.photos/seed/ricotta/50/50" },
+  { categoria: "Formaggi stagionati", nome: "Parmigiano Reggiano grattugiato", imgUrl: "https://picsum.photos/seed/parmigiano/50/50" },
+  { categoria: "Formaggi stagionati", nome: "Emmentaler a fette", imgUrl: "https://picsum.photos/seed/emmentaler/50/50" },
+  { categoria: "Formaggi stagionati", nome: "Gorgonzola piccante", imgUrl: "https://picsum.photos/seed/gorgonzola/50/50" },
+  { categoria: "Burro e Margarina", nome: "Burro tradizionale", imgUrl: "https://picsum.photos/seed/burro/50/50" },
+  { categoria: "Burro e Margarina", nome: "Margarina vegetale", imgUrl: "https://picsum.photos/seed/margarina/50/50" },
   
   // --- CARNE E PESCE ---
-  { categoria: "Carne bovina", nome: "Fettine di Manzo" },
-  { categoria: "Carne bovina", nome: "Carne macinata scelta" },
-  { categoria: "Carne suina", nome: "Salsiccia fresca" },
-  { categoria: "Carne suina", nome: "Costine di maiale" },
-  { categoria: "Pollame", nome: "Petto di pollo a fette" },
-  { categoria: "Pollame", nome: "Fusi di tacchino" },
-  { categoria: "Pesce fresco", nome: "Filetti di merluzzo" },
-  { categoria: "Pesce fresco", nome: "Salmone affumicato (vaschetta)" },
+  { categoria: "Carne bovina", nome: "Fettine di Manzo", imgUrl: "https://picsum.photos/seed/manzo/50/50" },
+  { categoria: "Carne bovina", nome: "Carne macinata scelta", imgUrl: "https://picsum.photos/seed/macinato/50/50" },
+  { categoria: "Carne suina", nome: "Salsiccia fresca", imgUrl: "https://picsum.photos/seed/salsiccia/50/50" },
+  { categoria: "Carne suina", nome: "Costine di maiale", imgUrl: "https://picsum.photos/seed/costine/50/50" },
+  { categoria: "Pollame", nome: "Petto di pollo a fette", imgUrl: "https://picsum.photos/seed/pollo/50/50" },
+  { categoria: "Pollame", nome: "Fusi di tacchino", imgUrl: "https://picsum.photos/seed/tacchino/50/50" },
+  { categoria: "Pesce fresco", nome: "Filetti di merluzzo", imgUrl: "https://picsum.photos/seed/merluzzo/50/50" },
+  { categoria: "Pesce fresco", nome: "Salmone affumicato (vaschetta)", imgUrl: "https://picsum.photos/seed/salmone/50/50" },
   
   // --- SALUMI E AFFETTATI ---
-  { categoria: "Salumi", nome: "Prosciutto cotto a fette" },
-  { categoria: "Salumi", nome: "Prosciutto crudo" },
-  { categoria: "Salumi", nome: "Salame milano" },
-  { categoria: "Salumi", nome: "Mortadella" },
+  { categoria: "Salumi", nome: "Prosciutto cotto a fette", imgUrl: "https://picsum.photos/seed/prosciutto-cotto/50/50" },
+  { categoria: "Salumi", nome: "Prosciutto crudo", imgUrl: "https://picsum.photos/seed/prosciutto-crudo/50/50" },
+  { categoria: "Salumi", nome: "Salame milano", imgUrl: "https://picsum.photos/seed/salame/50/50" },
+  { categoria: "Salumi", nome: "Mortadella", imgUrl: "https://picsum.photos/seed/mortadella/50/50" },
   
   // --- SURGELATI ---
-  { categoria: "Surgelati: Verdure", nome: "Piselli fini surgelati" },
-  { categoria: "Surgelati: Verdure", nome: "Spinaci cubetti surgelati" },
-  { categoria: "Surgelati: Pesce", nome: "Bastoncini di pesce" },
-  { categoria: "Surgelati: Pasti Pronti", nome: "Pizza margherita surgelata" },
-  { categoria: "Surgelati: Dessert", nome: "Gelato alla vaniglia" },
+  { categoria: "Surgelati: Verdure", nome: "Piselli fini surgelati", imgUrl: "https://picsum.photos/seed/piselli-surgelati/50/50" },
+  { categoria: "Surgelati: Verdure", nome: "Spinaci cubetti surgelati", imgUrl: "https://picsum.photos/seed/spinaci-surgelati/50/50" },
+  { categoria: "Surgelati: Pesce", nome: "Bastoncini di pesce", imgUrl: "https://picsum.photos/seed/bastoncini/50/50" },
+  { categoria: "Surgelati: Pasti Pronti", nome: "Pizza margherita surgelata", imgUrl: "https://picsum.photos/seed/pizza-surgelata/50/50" },
+  { categoria: "Surgelati: Dessert", nome: "Gelato alla vaniglia", imgUrl: "https://picsum.photos/seed/gelato/50/50" },
   
   // --- PASTA, RISO E LEGUMI SECCHI ---
-  { categoria: "Pasta secca", nome: "Spaghetti n°5" },
-  { categoria: "Pasta secca", nome: "Penne rigate" },
-  { categoria: "Riso", nome: "Riso Carnaroli" },
-  { categoria: "Legumi secchi", nome: "Lenticchie secche" },
-  { categoria: "Legumi secchi", nome: "Fagioli secchi cannellini" },
+  { categoria: "Pasta secca", nome: "Spaghetti n°5", imgUrl: "https://picsum.photos/seed/spaghetti/50/50" },
+  { categoria: "Pasta secca", nome: "Penne rigate", imgUrl: "https://picsum.photos/seed/penne/50/50" },
+  { categoria: "Riso", nome: "Riso Carnaroli", imgUrl: "https://picsum.photos/seed/riso/50/50" },
+  { categoria: "Legumi secchi", nome: "Lenticchie secche", imgUrl: "https://picsum.photos/seed/lenticchie/50/50" },
+  { categoria: "Legumi secchi", nome: "Fagioli secchi cannellini", imgUrl: "https://picsum.photos/seed/fagioli/50/50" },
   
   // --- CONSERVE, SALSE E OLII ---
-  { categoria: "Conserve pomodoro", nome: "Passata di pomodoro" },
-  { categoria: "Conserve pomodoro", nome: "Pelati in scatola" },
-  { categoria: "Conserve ittiche", nome: "Tonno sott'olio (vasetto)" },
-  { categoria: "Conserve ittiche", nome: "Sgombro in scatola" },
-  { categoria: "Olii e Condimenti", nome: "Olio extra vergine d'oliva" },
-  { categoria: "Olii e Condimenti", nome: "Aceto di vino bianco" },
-  { categoria: "Salse", nome: "Maionese in tubetto" },
-  { categoria: "Salse", nome: "Ketchup" },
-  { categoria: "Salse", nome: "Senape" },
-  { categoria: "Cibi pronti", nome: "Brodo vegetale in dado" },
+  { categoria: "Conserve pomodoro", nome: "Passata di pomodoro", imgUrl: "https://picsum.photos/seed/passata/50/50" },
+  { categoria: "Conserve pomodoro", nome: "Pelati in scatola", imgUrl: "https://picsum.photos/seed/pelati/50/50" },
+  { categoria: "Conserve ittiche", nome: "Tonno sott'olio (vasetto)", imgUrl: "https://picsum.photos/seed/tonno/50/50" },
+  { categoria: "Conserve ittiche", nome: "Sgombro in scatola", imgUrl: "https://picsum.photos/seed/sgombro/50/50" },
+  { categoria: "Olii e Condimenti", nome: "Olio extra vergine d'oliva", imgUrl: "https://picsum.photos/seed/olio/50/50" },
+  { categoria: "Olii e Condimenti", nome: "Aceto di vino bianco", imgUrl: "https://picsum.photos/seed/aceto/50/50" },
+  { categoria: "Salse", nome: "Maionese in tubetto", imgUrl: "https://picsum.photos/seed/maionese/50/50" },
+  { categoria: "Salse", nome: "Ketchup", imgUrl: "https://picsum.photos/seed/ketchup/50/50" },
+  { categoria: "Salse", nome: "Senape", imgUrl: "https://picsum.photos/seed/senape/50/50" },
+  { categoria: "Cibi pronti", nome: "Brodo vegetale in dado", imgUrl: "https://picsum.photos/seed/dado/50/50" },
   
   // --- SPEZIE, SALE E ZUCCHERO ---
-  { categoria: "Spezie e Aromi", nome: "Pepe nero macinato" },
-  { categoria: "Spezie e Aromi", nome: "Origano secco" },
-  { categoria: "Sale e Zucchero", nome: "Sale fino iodato" },
-  { categoria: "Sale e Zucchero", nome: "Zucchero semolato" },
-  { categoria: "Sale e Zucchero", nome: "Miele di acacia" },
+  { categoria: "Spezie e Aromi", nome: "Pepe nero macinato", imgUrl: "https://picsum.photos/seed/pepe/50/50" },
+  { categoria: "Spezie e Aromi", nome: "Origano secco", imgUrl: "https://picsum.photos/seed/origano/50/50" },
+  { categoria: "Sale e Zucchero", nome: "Sale fino iodato", imgUrl: "https://picsum.photos/seed/sale/50/50" },
+  { categoria: "Sale e Zucchero", nome: "Zucchero semolato", imgUrl: "https://picsum.photos/seed/zucchero/50/50" },
+  { categoria: "Sale e Zucchero", nome: "Miele di acacia", imgUrl: "https://picsum.photos/seed/miele/50/50" },
   
   // --- BEVANDE ---
-  { categoria: "Acqua", nome: "Acqua naturale (bottiglie da 1.5L)" },
-  { categoria: "Acqua", nome: "Acqua frizzante (bottiglie da 1.5L)" },
-  { categoria: "Soft Drinks", nome: "Coca Cola Zero" },
-  { categoria: "Soft Drinks", nome: "Gazzosa" },
-  { categoria: "Succhi", nome: "Succo d'arancia 100%" },
-  { categoria: "Succhi", nome: "Thè al limone" },
-  { categoria: "Vini", nome: "Vino rosso Chianti" },
-  { categoria: "Vini", nome: "Vino bianco frizzante" },
-  { categoria: "Birre", nome: "Birra bionda lager (conf. 6)" },
+  { categoria: "Acqua", nome: "Acqua naturale (bottiglie da 1.5L)", imgUrl: "https://picsum.photos/seed/acqua/50/50" },
+  { categoria: "Acqua", nome: "Acqua frizzante (bottiglie da 1.5L)", imgUrl: "https://picsum.photos/seed/acqua-frizzante/50/50" },
+  { categoria: "Soft Drinks", nome: "Coca Cola Zero", imgUrl: "https://picsum.photos/seed/coca-cola/50/50" },
+  { categoria: "Soft Drinks", nome: "Gazzosa", imgUrl: "https://picsum.photos/seed/gazzosa/50/50" },
+  { categoria: "Succhi", nome: "Succo d'arancia 100%", imgUrl: "https://picsum.photos/seed/succo/50/50" },
+  { categoria: "Succhi", nome: "Thè al limone", imgUrl: "https://picsum.photos/seed/the/50/50" },
+  { categoria: "Vini", nome: "Vino rosso Chianti", imgUrl: "https://picsum.photos/seed/vino-rosso/50/50" },
+  { categoria: "Vini", nome: "Vino bianco frizzante", imgUrl: "https://picsum.photos/seed/vino-bianco/50/50" },
+  { categoria: "Birre", nome: "Birra bionda lager (conf. 6)", imgUrl: "https://picsum.photos/seed/birra/50/50" },
   
   // --- DROGHERIA E PULIZIA ---
-  { categoria: "Igiene personale", nome: "Sapone liquido mani" },
-  { categoria: "Igiene personale", nome: "Shampoo neutro" },
-  { categoria: "Igiene personale", nome: "Dentifricio al fluoro" },
-  { categoria: "Carta e Monouso", nome: "Carta igienica (rotoli)" },
-  { categoria: "Carta e Monouso", nome: "Tovaglioli di carta" },
-  { categoria: "Pulizia casa", nome: "Detersivo pavimenti" },
-  { categoria: "Pulizia casa", nome: "Detersivo per piatti a mano" },
-  { categoria: "Pulizia casa", nome: "Candeggina" },
-  { categoria: "Bucato", nome: "Detersivo lavatrice liquido" },
-  { categoria: "Bucato", nome: "Ammorbidente concentrato" },
+  { categoria: "Igiene personale", nome: "Sapone liquido mani", imgUrl: "https://picsum.photos/seed/sapone/50/50" },
+  { categoria: "Igiene personale", nome: "Shampoo neutro", imgUrl: "https://picsum.photos/seed/shampoo/50/50" },
+  { categoria: "Igiene personale", nome: "Dentifricio al fluoro", imgUrl: "https://picsum.photos/seed/dentifricio/50/50" },
+  { categoria: "Carta e Monouso", nome: "Carta igienica (rotoli)", imgUrl: "https://picsum.photos/seed/carta-igienica/50/50" },
+  { categoria: "Carta e Monouso", nome: "Tovaglioli di carta", imgUrl: "https://picsum.photos/seed/tovaglioli/50/50" },
+  { categoria: "Pulizia casa", nome: "Detersivo pavimenti", imgUrl: "https://picsum.photos/seed/detersivo/50/50" },
+  { categoria: "Pulizia casa", nome: "Detersivo per piatti a mano", imgUrl: "https://picsum.photos/seed/piatti/50/50" },
+  { categoria: "Pulizia casa", nome: "Candeggina", imgUrl: "https://picsum.photos/seed/candeggina/50/50" },
+  { categoria: "Bucato", nome: "Detersivo lavatrice liquido", imgUrl: "https://picsum.photos/seed/lavatrice/50/50" },
+  { categoria: "Bucato", nome: "Ammorbidente concentrato", imgUrl: "https://picsum.photos/seed/ammorbidente/50/50" },
   
   // --- PET FOOD E VARIE ---
-  { categoria: "Animali domestici", nome: "Crocchette per cani adulti" },
-  { categoria: "Animali domestici", nome: "Cibo umido per gatti" },
-  { categoria: "Altro", nome: "Sacchetti per immondizia grandi" },
-  { categoria: "Altro", nome: "Pile stilo AA" },
+  { categoria: "Animali domestici", nome: "Crocchette per cani adulti", imgUrl: "https://picsum.photos/seed/crocchette/50/50" },
+  { categoria: "Animali domestici", nome: "Cibo umido per gatti", imgUrl: "https://picsum.photos/seed/cibo-gatti/50/50" },
+  { categoria: "Altro", nome: "Sacchetti per immondizia grandi", imgUrl: "https://picsum.photos/seed/sacchetti/50/50" },
+  { categoria: "Altro", nome: "Pile stilo AA", imgUrl: "https://picsum.photos/seed/pile/50/50" },
 ];
 /* -------------------------------------------------------- */
 
 
-/* -------------- ELEMENTI DOM -------------- */
+/* -------------- ELEMENTI DOM (invariato) -------------- */
 const catalogList = document.getElementById("catalogList");
 const searchInput = document.getElementById("searchInput");
 const manualInput = document.getElementById("manualInput");
@@ -188,9 +195,8 @@ const pdfNoteInput = document.getElementById("pdfNoteInput");
 const pdfNoteConfirmBtn = document.getElementById("pdfNoteConfirmBtn");
 const activeUsersListEl = document.getElementById("activeUsersList");
 
-// NUOVI ELEMENTI DOM PER L'ACCESSO
 const loginGateEl = document.getElementById("loginGate");
-const mainAppEl = document.getElementById("mainApp"); // Assicurati che <main> abbia l'ID 'mainApp'
+const mainAppEl = document.getElementById("mainApp"); 
 const inputFirstNameEl = document.getElementById("inputFirstName");
 const inputLastNameEl = document.getElementById("inputLastName");
 const loginButtonEl = document.getElementById("loginButton");
@@ -198,11 +204,10 @@ const loginButtonEl = document.getElementById("loginButton");
 
 let pdfNote = ""; 
 
-/* -------------- STATO GLOBALE -------------- */
-let shopping = []; // array di oggetti {nome, qty, done}
-let usersCache = {}; // Mappa per nome/cognome da Firestore: {userID: {firstName, lastName}}
-let presenceCache = {}; // Mappa per lo stato online/offline
-
+/* -------------- STATO GLOBALE (invariato) -------------- */
+let shopping = []; 
+let usersCache = {}; 
+let presenceCache = {}; 
 
 function showPDFNoteInput(callback) {
   // ... (funzione showPDFNoteInput - invariata)
@@ -215,8 +220,6 @@ function showPDFNoteInput(callback) {
   };
 }
 
-
-/* -------------- UTILITY: persistenza locale -------------- */
 function persistLocal() {
   localStorage.setItem("shoppingList", JSON.stringify(shopping));
 }
@@ -228,11 +231,21 @@ function restoreLocal() {
   }
 }
 
-/* -------------- FUNZIONI UI -------------- */
+/* -------------- FUNZIONI UI AGGIORNATE PER LE IMMAGINI -------------- */
 
+// AGGIORNATA: Recupera l'URL dell'immagine e la mostra nella lista
 function renderShopping() {
   shoppingItemsEl.innerHTML = "";
+
+  // Mappa per recuperare velocemente l'URL dell'immagine dal nome del prodotto
+  const productMap = catalogo.reduce((acc, p) => {
+    acc[p.nome.toLowerCase()] = p.imgUrl;
+    return acc;
+  }, {});
+
   shopping.forEach((item, index) => {
+    const itemImgUrl = productMap[item.nome.toLowerCase()] || 'https://via.placeholder.com/50/888/FFFFFF?text=?';
+    
     const li = document.createElement("li");
     li.classList.toggle("done", item.done);
     li.dataset.index = index;
@@ -240,8 +253,11 @@ function renderShopping() {
     li.innerHTML = `
       <div class="left">
         <input type="checkbox" ${item.done ? "checked" : ""} data-action="toggle" />
-        <span class="name">${item.nome}</span>
-        <span class="qty">${item.qty > 1 ? `(${item.qty})` : ""}</span>
+        <img src="${itemImgUrl}" alt="${item.nome}" class="product-photo-list">
+        <div>
+            <span class="name">${item.nome}</span>
+            <span class="qty">${item.qty > 1 ? `Quantità: ${item.qty}` : ""}</span>
+        </div>
       </div>
       <div class="right">
         <button data-action="decrease" class="button">-</button>
@@ -255,24 +271,43 @@ function renderShopping() {
   persistLocal();
 }
 
+// AGGIORNATA: Aggiunge l'immagine al catalogo
 function renderCatalog(items) {
   catalogList.innerHTML = "";
   let currentCategory = "";
 
-  items.forEach(item => {
-    if (item.categoria !== currentCategory) {
-      const categoryEl = document.createElement("div");
-      categoryEl.className = "catalog-category";
-      categoryEl.textContent = item.categoria;
-      catalogList.appendChild(categoryEl);
-      currentCategory = item.categoria;
-    }
+  // Raggruppa gli elementi per categoria
+  const groups = items.reduce((acc, item) => {
+    if (!acc[item.categoria]) acc[item.categoria] = [];
+    acc[item.categoria].push(item);
+    return acc;
+  }, {});
+  
+  const sortedCategories = Object.keys(groups).sort();
+  
+  sortedCategories.forEach(cat => {
+    const categoryEl = document.createElement("div");
+    categoryEl.className = "catalog-category";
+    categoryEl.textContent = cat;
+    catalogList.appendChild(categoryEl);
 
-    const itemEl = document.createElement("div");
-    itemEl.className = "catalog-item";
-    itemEl.textContent = item.nome;
-    itemEl.addEventListener("click", () => addItemToShopping(item.nome));
-    catalogList.appendChild(itemEl);
+    // Ordina i prodotti all'interno della categoria
+    groups[cat].sort((a, b) => a.nome.localeCompare(b.nome)).forEach(item => {
+      const itemEl = document.createElement("div");
+      itemEl.className = "catalog-item";
+      
+      const itemImgUrl = item.imgUrl || 'https://via.placeholder.com/50/888/FFFFFF?text=PROD';
+      
+      itemEl.innerHTML = `
+        <img src="${itemImgUrl}" alt="${item.nome}" class="product-photo-catalog">
+        <div class="meta">
+          <strong>${item.nome}</strong>
+        </div>
+        `;
+      
+      itemEl.addEventListener("click", () => addItemToShopping(item.nome));
+      catalogList.appendChild(itemEl);
+    });
   });
 }
 
@@ -292,24 +327,18 @@ function updateCount() {
 }
 
 
-/* -------------- FUNZIONI UTENTI ATTIVI E PRESENZA -------------- */
-
-// Funzione per aggiornare la UI della lista utenti
+/* -------------- FUNZIONI UTENTI ATTIVI E PRESENZA (invariato) -------------- */
 function renderUsers() {
     activeUsersListEl.innerHTML = "";
     
-    // Filtra e prepara gli utenti che hanno un nome e cognome
     const allUserIDs = Object.keys(usersCache).filter(id => usersCache[id]?.firstName);
     
-    // Ordina gli utenti: online prima di offline
     const sortedUserIDs = allUserIDs.sort((a, b) => {
         const statusA = presenceCache[a]?.state === 'online' ? 0 : 1;
         const statusB = presenceCache[b]?.state === 'online' ? 0 : 1;
         
-        // Priorità 1: per stato (online/offline)
         if (statusA !== statusB) return statusA - statusB; 
         
-        // Priorità 2: per nome
         const nameA = `${usersCache[a].firstName} ${usersCache[a].lastName}`;
         const nameB = `${usersCache[b].firstName} ${usersCache[b].lastName}`;
         return nameA.localeCompare(nameB);
@@ -317,12 +346,10 @@ function renderUsers() {
     
     sortedUserIDs.forEach(userID => {
         const user = usersCache[userID];
-        // Se l'ID non è in presenceCache (non ha mai fatto il setupPresence), è offline.
         const status = presenceCache[userID] || { state: 'offline' };
         
         const li = document.createElement("li");
         
-        // Determina le classi CSS per il pallino
         const dotClass = `status-${status.state}`;
         const fullName = `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`;
         
@@ -339,7 +366,6 @@ function renderUsers() {
     }
 }
 
-// Aggiorna i dati dell'utente in Firestore (Nome/Cognome)
 async function saveUserData(userID, firstName, lastName) {
     try {
         await db.collection(USER_COLLECTION_NAME).doc(userID).set({
@@ -353,39 +379,30 @@ async function saveUserData(userID, firstName, lastName) {
     }
 }
 
-
-// 1. Logica di PRESENZA (onDisconnect) per l'utente corrente
 function setupPresence() {
     if (!CURRENT_USER_ID) return;
 
     const userRef = dbRT.ref('presence/' + CURRENT_USER_ID);
 
-    // Imposta l'azione 'onDisconnect': se la connessione cade, setta lo stato a 'offline'
     userRef.onDisconnect().set({
         state: 'offline',
         last_seen: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
-        // Imposta immediatamente lo stato 'online'
         userRef.set({
             state: 'online',
             last_seen: firebase.database.ServerValue.TIMESTAMP
         });
-        // Non è necessario fare il renderUsers qui, lo farà il listener RTDB.
     }).catch(err => {
         console.error("Errore setupPresence:", err);
     });
 
-    // Se l'utente chiude volontariamente la finestra (consigliato)
     window.addEventListener('beforeunload', () => {
-        // Un semplice set sincrono per provare a notificare l'uscita
         userRef.set({ state: 'offline', last_seen: Date.now() });
     });
 }
 
 
-// 2. Recupera tutti i Nomi/Cognomi da Firestore e ASCOLTA LO STATO RTDB
 async function loadAndWatchUsers() {
-    // 1. Ascolta i nomi e cognomi in tempo reale da Firestore
     db.collection(USER_COLLECTION_NAME).onSnapshot((snapshot) => {
         snapshot.forEach(doc => {
             usersCache[doc.id] = doc.data();
@@ -395,7 +412,6 @@ async function loadAndWatchUsers() {
         console.error("Errore nell'ascolto degli utenti da Firestore:", error);
     });
 
-    // 2. Ascolta i cambiamenti di stato da Realtime Database
     dbRT.ref('presence').on('value', (snapshot) => {
         const newPresenceData = snapshot.val() || {};
         presenceCache = newPresenceData;
@@ -406,8 +422,7 @@ async function loadAndWatchUsers() {
 }
 
 
-/* -------------- GESTIONE ACCESSO -------------- */
-
+/* -------------- GESTIONE ACCESSO (invariato) -------------- */
 function handleLogin() {
     const firstName = inputFirstNameEl.value.trim();
     const lastName = inputLastNameEl.value.trim();
@@ -417,56 +432,47 @@ function handleLogin() {
         return;
     }
     
-    // 1. Verifica/Genera ID Utente
     if (!CURRENT_USER_ID) {
         CURRENT_USER_ID = generateUUID();
         localStorage.setItem("user_unique_id", CURRENT_USER_ID);
     }
     
-    // 2. Salva il nome e cognome in Firestore con l'ID univoco
     saveUserData(CURRENT_USER_ID, firstName, lastName);
 
-    // 3. Nasconde il form e mostra l'app
     loginGateEl.style.display = 'none';
     mainAppEl.style.display = 'block';
 
-    // 4. Avvia la logica di presenza
     setupPresence();
 }
 
 function checkLocalLogin() {
     if (CURRENT_USER_ID) {
-        // Se l'ID esiste in localStorage, cerca i dati in Firestore
         db.collection(USER_COLLECTION_NAME).doc(CURRENT_USER_ID).get()
             .then(doc => {
                 if (doc.exists) {
                     CURRENT_USER_DATA = doc.data();
                     loginGateEl.style.display = 'none';
                     mainAppEl.style.display = 'block';
-                    // Pre-popola i campi in caso di logout/nuovo accesso
                     inputFirstNameEl.value = CURRENT_USER_DATA.firstName || '';
                     inputLastNameEl.value = CURRENT_USER_DATA.lastName || '';
-                    setupPresence(); // Avvia la presenza
+                    setupPresence(); 
                 } else {
-                    // ID presente ma dati persi: richiede un nuovo accesso per registrare il nome
                     loginGateEl.style.display = 'block';
                     mainAppEl.style.display = 'none';
                 }
             })
             .catch(() => {
-                // Fallback in caso di errore di rete
                 loginGateEl.style.display = 'block';
                 mainAppEl.style.display = 'none';
             });
     } else {
-        // Nessun ID: mostra il form di login
         loginGateEl.style.display = 'block';
         mainAppEl.style.display = 'none';
     }
 }
 
 
-/* -------------- FIRESTORE: SALVA / CARICA / ELIMINA -------------- */
+/* -------------- FIRESTORE: SALVA / CARICA / ELIMINA (invariato) -------------- */
 async function saveList() {
   const listName = prompt("Inserisci un nome per la lista:");
   if (!listName) return;
@@ -480,7 +486,7 @@ async function saveList() {
   try {
     await db.collection("liste_salvate").add(listData);
     alert(`Lista "${listName}" salvata con successo!`);
-    loadLists(); // Ricarica la lista salvata
+    loadLists(); 
   } catch (err) {
     console.error("Errore nel salvataggio:", err);
     alert("Errore nel salvataggio della lista.");
@@ -520,22 +526,17 @@ async function loadLists() {
   }
 }
 
-// ... (resto delle funzioni di caricamento e eliminazione liste)
-// ... (funzioni PDF - downloadStyledPDF, sharePDF)
+// ... (Includi qui le funzioni downloadStyledPDF e sharePDF)
 
 /* -------------- INIZIALIZZAZIONE -------------- */
 
-// Esegui la persistenza locale all'avvio e all'uscita dalla pagina
 window.addEventListener("beforeunload", persistLocal);
 restoreLocal(); 
 
-// Avvia l'ascolto per la lista utenti (si aggiornerà quando i dati arrivano)
 loadAndWatchUsers(); 
 
-// CONTROLLO DI ACCESSO
 checkLocalLogin(); 
 
-// Inizializza UI
 renderCatalog(catalogo);
 renderShopping();
 
@@ -552,39 +553,46 @@ addManualBtn.addEventListener("click", async () => {
   const val = manualInput.value.trim();
   if (!val) return;
 
-  // Normalizza il valore per il confronto
   const normalizedVal = val.toLowerCase();
 
-  // Controlla se esiste già nel catalogo (ignorando maiuscole/minuscole)
   if (!catalogo.some(p => p.nome.toLowerCase() === normalizedVal)) {
-    // Aggiungi automaticamente al catalogo con categoria "Altro"
+    // Aggiunto senza imgUrl. Il render userà l'icona placeholder '?'
     catalogo.push({ categoria: "Altro", nome: val });
 
-    // Salva il catalogo aggiornato su Firestore
     await saveCatalogFirestore();
 
-    // Aggiorna la UI del catalogo
     renderCatalog(catalogo);
   }
 
-  // Aggiungi alla lista della spesa
   addItemToShopping(val);
   manualInput.value = "";
 });
 
+// Gestione degli eventi di aumento/diminuzione/cancellazione della lista
 shoppingItemsEl.addEventListener("click", async (e) => {
     const target = e.target;
+    const action = target.dataset.action;
+    
+    // Per toggle, usiamo l'input checkbox
+    if (target.type === 'checkbox' && action === 'toggle') {
+        const li = target.closest('li');
+        const index = parseInt(li.dataset.index);
+        if (isNaN(index)) return;
+
+        shopping[index].done = !shopping[index].done;
+        renderShopping();
+        return;
+    }
+
+    // Per i bottoni, l'indice è sull'elemento button
     const li = target.closest('li');
     if (!li) return;
 
     const index = parseInt(li.dataset.index);
     if (isNaN(index)) return;
 
-    const action = target.dataset.action;
 
-    if (action === "toggle") {
-        shopping[index].done = !shopping[index].done;
-    } else if (action === "increase") {
+    if (action === "increase") {
         shopping[index].qty += 1;
     } else if (action === "decrease") {
         shopping[index].qty = Math.max(1, shopping[index].qty - 1);
@@ -599,7 +607,6 @@ shoppingItemsEl.addEventListener("click", async (e) => {
 saveBtn.addEventListener("click", saveList);
 loadBtn.addEventListener("click", loadLists);
 
-// Aggiorna la variabile pdfNote prima di scaricare o condividere
 downloadBtn.addEventListener("click", () => {
   showPDFNoteInput(downloadStyledPDF);
 });

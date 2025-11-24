@@ -449,3 +449,18 @@ ul#shoppingItems li .left {
         grid-column: 1 / 2; 
     }
 }
+/* ================== FOOTER MINIMALE ================== */
+.app-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 30px; /* Spazio tra l'app principale e il footer */
+    color: var(--muted-color);
+    font-size: 0.8em;
+}
+
+@media (max-width: 600px) {
+    .app-footer {
+        margin-top: 10px;
+        padding-bottom: 50px; /* Spazio extra in fondo per i dispositivi mobili */
+    }
+}

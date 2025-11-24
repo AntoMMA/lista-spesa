@@ -1,5 +1,5 @@
 /* =================================================================
-   FILE: script.js - Codice Aggiornato con Auto-Apprendimento
+   FILE: script.js - Codice Aggiornato con Auto-Apprendimento e PDF Stilizzato
    ================================================================= */
 
 /* -------------- FIREBASE CONFIG (DEVI SOSTITUIRE!) -------------- */
@@ -32,7 +32,7 @@ let actionPending = '';
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
 let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
 
-/* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO -------------- */
+/* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
 const catalogo = [
     // --- FRUTTA E VERDURA (Integrate) ---
     { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Mela" },
@@ -188,7 +188,7 @@ const catalogo = [
     { categoria: "Varie", nome: "Lampadine (E27)", imgUrl: "https://placehold.co/50x50/78716C/FFFFFF?text=Lamp" }
 ];
 
-/* -------------- FUNZIONI BASE -------------- */
+/* -------------- FUNZIONI BASE (INVARIANTI) -------------- */
 
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -279,7 +279,7 @@ function handleLogout() {
 }
 
 
-/* -------------- FUNZIONI DI AUTO-APPRENDIMENTO (NUOVE) -------------- */
+/* -------------- FUNZIONI DI AUTO-APPRENDIMENTO (INVARIANTI) -------------- */
 
 /**
  * Salva o aggiorna il conteggio di un prodotto aggiunto manualmente.
@@ -339,7 +339,7 @@ async function getFrequentProducts() {
     }
 }
 
-/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA MODIFICATE) -------------- */
+/* -------------- FUNZIONI CATALOGO (RENDER e RICERCA INVARIANTI) -------------- */
 
 /**
  * Renderizza il catalogo con l'opzione dei prodotti frequenti in cima.
@@ -567,71 +567,148 @@ async function loadLists() {
 }
 
 
-/* -------------- FUNZIONI PDF e CONDIVISIONE (Invariate) -------------- */
+/* -------------- FUNZIONI PDF e CONDIVISIONE (AGGIORNATE PER STILE) -------------- */
+
+/**
+ * Genera l'HTML stilizzato (mockup) della lista spesa per la conversione PDF.
+ * Questo è il cuore dello stile Dark Mode.
+ * @param {Array<Object>} list - La lista della spesa corrente.
+ * @param {string} note - La nota utente da includere.
+ * @returns {string} L'HTML completo e stilizzato.
+ */
+function generateStyledListHTML(list, note) {
+    // Mappatura semplificata dei colori per i badge (basata sull'estensione del catalogo)
+    const getColor = (name) => {
+        if (name.includes("Biscotti") || name.includes("Cioccolato") || name.includes("Merendine")) return "#EC4899"; // Rosa (Dolci)
+        if (name.includes("Burro") || name.includes("Panna") || name.includes("Latte") || name.includes("Yogurt") || name.includes("Formaggi") || name.includes("Uova")) return "#FBBF24"; // Giallo (Latticini)
+        if (name.includes("Manzo") || name.includes("Pollo") || name.includes("Carne") || name.includes("Prosciutto") || name.includes("Salumi") || name.includes("Pesce")) return "#EF4444"; // Rosso (Carne/Pesce)
+        if (name.includes("Acqua") || name.includes("Coca-Cola") || name.includes("Succo") || name.includes("The") || name.includes("Birra") || name.includes("Vino")) return "#10B981"; // Verde (Bevande)
+        if (name.includes("Mele") || name.includes("Pomodori") || name.includes("Insalata") || name.includes("Frutta") || name.includes("Verdura")) return "#34D399"; // Verde chiaro (F/V)
+        if (name.includes("Detersivo") || name.includes("Sgrassatore") || name.includes("Shampoo") || name.includes("Carta") || name.includes("Igiene")) return "#059669"; // Verde scuro (Casa/Igiene)
+        return "#60A5FA"; // Blu predefinito (Manuale/Varie)
+    };
+
+    let listHtml = list.map((item) => {
+        const itemClass = item.done ? 'pdf-done-item' : 'pdf-pending-item';
+        const color = getColor(item.nome);
+        // Usa le prime 4 lettere del prodotto per il badge (se lungo almeno 4)
+        const iconText = item.nome.length >= 4 ? item.nome.substring(0, 4).toUpperCase() : item.nome.toUpperCase(); 
+        
+        return `
+            <div class="${itemClass}" style="
+                display: flex; 
+                align-items: center; 
+                padding: 6px 0; 
+                border-bottom: 1px solid #333; 
+                color: ${item.done ? '#999' : '#fff'};
+                font-family: Arial, sans-serif;
+                font-size: 11px; 
+            ">
+                <div style="
+                    width: 18px; 
+                    height: 18px; 
+                    border: 1px solid ${item.done ? '#999' : color}; 
+                    border-radius: 50%; 
+                    margin-right: 8px; 
+                    flex-shrink: 0;
+                    text-align: center;
+                    line-height: 18px;
+                    font-size: 9px;
+                ">${item.done ? '✓' : ''}</div>
+                <div style="
+                    width: 35px; 
+                    height: 35px; 
+                    border-radius: 50%; 
+                    background-color: ${color}; 
+                    color: #fff;
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    font-size: 8px; 
+                    margin-right: 10px;
+                    flex-shrink: 0;
+                ">${iconText}</div>
+                <span style="flex-grow: 1; text-decoration: ${item.done ? 'line-through' : 'none'};">${item.nome}</span>
+                <span style="font-weight: bold; color: ${item.done ? '#999' : '#fff'}; flex-shrink: 0;">(x ${item.qty})</span>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div style="padding: 10px; background: #1a1a1a; color: #fff; font-family: Arial, sans-serif;">
+            <h1 style="font-size: 18px; text-align: center; margin-bottom: 5px; color: #60A5FA;">Lista Spesa Condivisa</h1>
+            ${note ? `<p style="font-size: 9px; text-align: center; color: #aaa; margin-bottom: 10px;">Note: ${note}</p>` : ''}
+            <div style="border: 1px solid #333; padding: 5px; border-radius: 5px;">
+                ${listHtml}
+            </div>
+        </div>
+    `;
+}
+
 
 function downloadStyledPDF() {
-    if (!window.jspdf || !window.jspdf.jsPDF) {
-        alert("Libreria jsPDF non caricata. Impossibile generare il PDF.");
+    // Verifica che entrambe le librerie siano caricate
+    if (!window.jspdf || !window.html2canvas) {
+        alert("Librerie jsPDF/html2canvas non caricate. Assicurati che siano incluse nell'HTML.");
         return;
     }
 
+    const printArea = document.getElementById("pdfPrintArea");
+    
+    // 1. Genera l'HTML stilizzato e iniettalo nell'area nascosta
+    printArea.innerHTML = generateStyledListHTML(shopping, pdfNote);
+    
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
     
-    let y = 15; 
-    const margin = 10;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const doneItems = shopping.filter(i => i.done);
-    const pendingItems = shopping.filter(i => !i.done);
-    
-    doc.setFontSize(18);
-    doc.text("Lista Spesa Condivisa", pageWidth / 2, y, { align: "center" });
-    y += 8;
-    
-    if (pdfNote) {
-        doc.setFontSize(10);
-        doc.setTextColor(150, 150, 150); 
-        const noteLines = doc.splitTextToSize(`Nota: ${pdfNote}`, pageWidth - 2 * margin);
-        doc.text(noteLines, pageWidth / 2, y, { align: "center" });
-        y += noteLines.length * 5 + 5;
-    }
-    
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0); 
-    doc.text("Articoli da Acquistare:", margin, y);
-    y += 7;
-    
-    doc.setFontSize(12);
-    pendingItems.forEach(item => {
-        const text = `[ ] ${item.nome} (x ${item.qty})`;
-        doc.text(text, margin + 5, y);
-        y += 7;
-    });
-    
-    if (doneItems.length > 0) {
-        y += 10;
-        doc.setFontSize(14);
-        doc.setTextColor(0, 0, 0);
-        doc.text("Articoli Già Acquistati:", margin, y);
-        y += 7;
+    // 2. Converti l'HTML in un canvas (immagine) con alta risoluzione
+    html2canvas(printArea, { 
+        backgroundColor: '#1a1a1a', 
+        scale: 2 
+    }).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
         
-        doc.setFontSize(12);
-        doc.setTextColor(150, 150, 150); 
-        doneItems.forEach(item => {
-            const text = `[X] ${item.nome} (x ${item.qty})`;
-            doc.text(text, margin + 5, y);
-            y += 7;
-        });
-    }
+        const pdfWidth = 210; // Larghezza A4 in mm
+        const pdfHeight = 297; // Altezza A4 in mm
+        const margin = 10;
+        
+        // Calcola le dimensioni proporzionali dell'immagine nel PDF
+        const imgWidth = pdfWidth - (2 * margin); 
+        const imgHeight = canvas.height * imgWidth / canvas.width; 
+        
+        let heightLeft = imgHeight; // Altezza totale da stampare
+        
+        // Crea il documento PDF. L'altezza iniziale è l'altezza standard A4 o l'altezza del contenuto (la maggiore)
+        const doc = new jsPDF('p', 'mm', [pdfWidth, Math.max(pdfHeight, imgHeight + (2 * margin))]); 
+        
+        let position = 0;
 
+        // 3. Aggiungi l'immagine al PDF
+        doc.addImage(imgData, 'PNG', margin, position + margin, imgWidth, imgHeight);
+        heightLeft -= (pdfHeight - margin);
 
-    doc.save("ListaSpesa.pdf");
-    pdfNote = ""; 
-    pdfNoteInputEl.value = "";
-    pdfNoteContainerEl.style.display = 'none'; 
+        // Gestisce pagine multiple per liste molto lunghe (anti-taglio)
+        while (heightLeft > 0) {
+            // Calcola la posizione per il ritaglio sulla pagina successiva
+            position = - (imgHeight - heightLeft); 
+            doc.addPage();
+            doc.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+            heightLeft -= (pdfHeight - margin);
+        }
+
+        doc.save("ListaSpesaStilizzata.pdf");
+        
+        // Pulisci l'area di stampa e la nota PDF
+        pdfNote = ""; 
+        pdfNoteInputEl.value = "";
+        pdfNoteContainerEl.style.display = 'none'; 
+        printArea.innerHTML = ''; 
+    });
 }
 
+
 function sharePDF() {
+    // La funzione di Condividi ora tenta la condivisione testuale, ma se fallisce, 
+    // ricade nel download del PDF stilizzato.
     const listText = shopping.map(item => 
         `[${item.done ? 'X' : ' '}] ${item.nome} (Qta: ${item.qty})`
     ).join('\n');
@@ -645,14 +722,16 @@ function sharePDF() {
     if (navigator.share) {
         navigator.share(shareData)
             .catch((error) => {
-                console.error('Errore durante la condivisione:', error);
-                downloadStyledPDF(); 
+                console.error('Errore durante la condivisione web:', error);
+                alert("Condivisione fallita. Verrà scaricato il PDF stilizzato.");
+                downloadStyledPDF(); // Ricade nel download stilizzato
             });
     } else {
-        alert("Il tuo browser non supporta l'API di condivisione. Verrà scaricato il PDF.");
-        downloadStyledPDF();
+        alert("Il tuo browser non supporta l'API di condivisione nativa. Verrà scaricato il PDF stilizzato.");
+        downloadStyledPDF(); // Ricade nel download stilizzato
     }
     
+    // Pulisci la nota
     pdfNote = ""; 
     pdfNoteInputEl.value = "";
     pdfNoteContainerEl.style.display = 'none';
@@ -732,7 +811,7 @@ function listenToActiveList() {
 }
 
 
-/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA -------------- */
+/* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA (INVARIANTI) -------------- */
 
 function getDOMElements() {
     // Funzione per ottenere tutti gli elementi DOM necessari

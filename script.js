@@ -8,6 +8,7 @@ const firebaseConfig = {
   appId: "1:736757613454:web:50744d7ce9db9d3ebc5adf",
   measurementId: "G-64QH2WHH2X"
 };
+// L'inizializzazione di Firebase può avvenire subito
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const dbRT = firebase.database(); 
@@ -17,6 +18,7 @@ let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
 let pdfNote = ""; // Variabile per la nota del PDF
+let shopping = []; // La lista spesa attiva
 
 function generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -26,35 +28,12 @@ function generateUUID() {
 }
 
 
-/* -------------- VARIABILI GLOBALI E CATTURA ELEMENTI DOM -------------- */
-let shopping = []; // La lista spesa attiva
+/* -------------- VARIABILI GLOBALI (DICHIARATE MA NON ANCORA ASSEGNATE) -------------- */
+// Queste variabili saranno assegnate solo dopo che il DOM è pronto.
+let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl;
 
-// Elementi di interfaccia utente
-const loginGateEl = document.getElementById("loginGate");
-const mainAppEl = document.getElementById("mainApp");
-const loginButtonEl = document.getElementById("loginButton");
-const inputFirstNameEl = document.getElementById("inputFirstName");
-const inputLastNameEl = document.getElementById("inputLastName");
-const loggedInUserEl = document.getElementById("loggedInUser");
-const logoutButtonEl = document.getElementById("logoutButton");
-const catalogEl = document.getElementById("catalog");
-const shoppingItemsEl = document.getElementById("shoppingItems");
-const itemCountEl = document.getElementById("itemCount");
-const addManualInputEl = document.getElementById("addManualInput");
-const addManualBtnEl = document.getElementById("addManualBtn");
-const clearBtnEl = document.getElementById("clearBtn");
-const saveBtnEl = document.getElementById("saveBtn");
-const loadBtnEl = document.getElementById("loadBtn");
-const savedListsEl = document.getElementById("savedLists");
-const activeUsersListEl = document.getElementById("activeUsersList");
-const pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
-const pdfNoteInputEl = document.getElementById("pdfNoteInput");
-const pdfNoteConfirmBtnEl = document.getElementById("pdfNoteConfirmBtn");
-const downloadBtnEl = document.getElementById("downloadBtn");
-const shareBtnEl = document.getElementById("shareBtn");
 
 /* -------------- CATALOGO PREIMPOSTATO AMPLIATO E CON IMMAGINI (Temporanee/Placeholder) -------------- */
-// *** QUESTE IMMAGINI SONO TEMPORANEE. DOVRAI SOSTITUIRLE CON I TUOI URL STABILI (es. da Firebase Storage) ***
 const catalogo = [
     // --- FRUTTA E VERDURA ---
     { categoria: "Frutta fresca", nome: "Mele Golden", imgUrl: "https://placehold.co/50x50/34D399/FFFFFF?text=Frutta" },
@@ -460,120 +439,6 @@ function sharePDF() {
 }
 
 
-/* -------------- EVENT LISTENERS -------------- */
-
-// EVENTO CATALOGO: Aggiunge elemento alla lista
-catalogEl.addEventListener("click", (e) => {
-    const itemEl = e.target.closest(".catalog-item");
-    if (itemEl) {
-        const name = itemEl.dataset.name;
-        const imgUrl = itemEl.dataset.imgUrl;
-        addItem(name, imgUrl);
-    }
-});
-
-// EVENTO LISTA SPESA: Gestisce aumento/diminuzione/eliminazione/fatto
-shoppingItemsEl.addEventListener("click", handleListClick);
-
-// EVENTO PULSANTE AGGIUNGI MANUALE
-addManualBtnEl.addEventListener("click", () => {
-    const name = addManualInputEl.value.trim();
-    if (name) {
-        // Usa un placeholder generico se l'immagine è aggiunta manualmente
-        addItem(name, 'https://placehold.co/40x40/60A5FA/FFFFFF?text=Manuale'); 
-        addManualInputEl.value = "";
-    }
-});
-addManualInputEl.addEventListener("keypress", (e) => {
-    if (e.key === 'Enter') {
-        addManualBtnEl.click();
-    }
-});
-
-// EVENTO PULSANTE PULISCI
-clearBtnEl.addEventListener("click", () => {
-    if (confirm("Sei sicuro di voler pulire l'intera lista?")) {
-        shopping = [];
-        renderShopping();
-    }
-});
-
-// EVENTO PULSANTE SALVA
-saveBtnEl.addEventListener("click", saveList);
-
-// EVENTO PULSANTE CARICA
-loadBtnEl.addEventListener("click", loadLists);
-
-// EVENTO PULSANTE SCARICA PDF
-downloadBtnEl.addEventListener("click", () => {
-    // Mostra il campo della nota prima di avviare il download
-    pdfNoteContainerEl.style.display = 'block';
-    // Il download viene gestito dopo la conferma della nota
-});
-
-// EVENTO PULSANTE CONDIVIDI PDF
-shareBtnEl.addEventListener("click", () => {
-    // Mostra il campo della nota prima di avviare la condivisione
-    pdfNoteContainerEl.style.display = 'block';
-    // La condivisione viene gestita dopo la conferma della nota
-});
-
-// EVENTO CONFERMA NOTA PDF
-pdfNoteConfirmBtnEl.addEventListener("click", () => {
-    pdfNote = pdfNoteInputEl.value.trim();
-    // Determina quale azione (download o share) deve seguire la conferma della nota
-    // Utilizziamo il download come azione predefinita dopo la conferma.
-    downloadStyledPDF(); 
-});
-
-
-// EVENTI LISTE SALVATE
-savedListsEl.addEventListener("click", async (e) => {
-    const target = e.target;
-    const action = target.dataset.action;
-    const id = target.dataset.id;
-    if (!action || !id) return;
-
-    if (action === "load") {
-        if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
-        try {
-            const doc = await db.collection("liste_salvate").doc(id).get();
-            if (doc.exists) {
-                shopping = doc.data().items || [];
-                renderShopping();
-                alert("Lista caricata con successo.");
-            } else {
-                alert("Lista non trovata.");
-            }
-        } catch (err) {
-            console.error("Errore nel caricamento della lista:", err);
-            alert("Errore nel caricamento della lista.");
-        }
-    } else if (action === "delete") {
-        if (!confirm("Sei sicuro di voler eliminare questa lista salvata?")) return;
-        try {
-            await db.collection("liste_salvate").doc(id).delete();
-            alert("Lista eliminata con successo.");
-            loadLists();
-        } catch (err) {
-            console.error("Errore nell'eliminazione della lista:", err);
-            alert("Errore nell'eliminazione della lista.");
-        }
-    }
-});
-
-
-// EVENTO DI LOGIN
-loginButtonEl.addEventListener("click", handleLogin);
-inputLastNameEl.addEventListener("keypress", (e) => {
-    if (e.key === 'Enter') handleLogin();
-});
-
-
-// EVENTO LOGOUT
-logoutButtonEl.addEventListener("click", handleLogout);
-
-
 /* -------------- FUNZIONI REALTIME (UTENTI ATTIVI E LISTA) -------------- */
 
 function listenToActiveUsers() {
@@ -601,8 +466,7 @@ function listenToActiveList() {
         // Questa funzione si attiva OGNI VOLTA che la lista nel Realtime Database cambia
         const remoteList = snapshot.val();
         
-        // Controlla se il cambiamento è stato innescato da te (potrebbe richiedere un controllo più sofisticato)
-        // Per ora, sincronizziamo se la lista locale è diversa da quella remota (utile per la collaborazione)
+        // Sincronizziamo se la lista locale è diversa da quella remota (utile per la collaborazione)
         if (JSON.stringify(remoteList) !== JSON.stringify(shopping)) {
             shopping = remoteList || [];
             renderShopping();
@@ -611,7 +475,148 @@ function listenToActiveList() {
 }
 
 
-/* -------------- INIZIALIZZAZIONE -------------- */
+/* -------------- INIZIALIZZAZIONE E AVVIO -------------- */
+
+// 1. Assegna le variabili DOM (solo dopo che gli elementi esistono)
+function getDOMElements() {
+    loginGateEl = document.getElementById("loginGate");
+    mainAppEl = document.getElementById("mainApp");
+    loginButtonEl = document.getElementById("loginButton");
+    inputFirstNameEl = document.getElementById("inputFirstName");
+    inputLastNameEl = document.getElementById("inputLastName");
+    loggedInUserEl = document.getElementById("loggedInUser");
+    logoutButtonEl = document.getElementById("logoutButton");
+    catalogEl = document.getElementById("catalog");
+    shoppingItemsEl = document.getElementById("shoppingItems");
+    itemCountEl = document.getElementById("itemCount");
+    addManualInputEl = document.getElementById("addManualInput");
+    addManualBtnEl = document.getElementById("addManualBtn");
+    clearBtnEl = document.getElementById("clearBtn");
+    saveBtnEl = document.getElementById("saveBtn");
+    loadBtnEl = document.getElementById("loadBtn");
+    savedListsEl = document.getElementById("savedLists");
+    activeUsersListEl = document.getElementById("activeUsersList");
+    pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
+    pdfNoteInputEl = document.getElementById("pdfNoteInput");
+    pdfNoteConfirmBtnEl = document.getElementById("pdfNoteConfirmBtn");
+    downloadBtnEl = document.getElementById("downloadBtn");
+    shareBtnEl = document.getElementById("shareBtn");
+}
+
+// 2. Aggiungi tutti gli Event Listener dopo che gli elementi DOM sono stati catturati
+function addAllEventListeners() {
+    // EVENTO CATALOGO: Aggiunge elemento alla lista
+    catalogEl.addEventListener("click", (e) => {
+        const itemEl = e.target.closest(".catalog-item");
+        if (itemEl) {
+            const name = itemEl.dataset.name;
+            const imgUrl = itemEl.dataset.imgUrl;
+            addItem(name, imgUrl);
+        }
+    });
+
+    // EVENTO LISTA SPESA: Gestisce aumento/diminuzione/eliminazione/fatto
+    shoppingItemsEl.addEventListener("click", handleListClick);
+
+    // EVENTO PULSANTE AGGIUNGI MANUALE
+    addManualBtnEl.addEventListener("click", () => {
+        const name = addManualInputEl.value.trim();
+        if (name) {
+            addItem(name, 'https://placehold.co/40x40/60A5FA/FFFFFF?text=Manuale'); 
+            addManualInputEl.value = "";
+        }
+    });
+    addManualInputEl.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') {
+            addManualBtnEl.click();
+        }
+    });
+
+    // EVENTO PULSANTE PULISCI
+    clearBtnEl.addEventListener("click", () => {
+        if (confirm("Sei sicuro di voler pulire l'intera lista?")) {
+            shopping = [];
+            renderShopping();
+        }
+    });
+
+    // EVENTO PULSANTE SALVA
+    saveBtnEl.addEventListener("click", saveList);
+
+    // EVENTO PULSANTE CARICA
+    loadBtnEl.addEventListener("click", loadLists);
+
+    // EVENTO PULSANTE SCARICA PDF
+    downloadBtnEl.addEventListener("click", () => {
+        // Mostra il campo della nota prima di avviare il download
+        pdfNoteContainerEl.style.display = 'block';
+    });
+
+    // EVENTO PULSANTE CONDIVIDI PDF
+    shareBtnEl.addEventListener("click", () => {
+        // Mostra il campo della nota prima di avviare la condivisione
+        pdfNoteContainerEl.style.display = 'block';
+    });
+
+    // EVENTO CONFERMA NOTA PDF
+    pdfNoteConfirmBtnEl.addEventListener("click", () => {
+        pdfNote = pdfNoteInputEl.value.trim();
+        // Determina quale azione (download o share) deve seguire la conferma della nota
+        // Poiché downloadBtn e shareBtn sono collegati entrambi a questa azione
+        // Dobbiamo usare un flag o una logica più complessa. Per semplicità,
+        // useremo il download come azione predefinita dopo la conferma.
+        // Se volessi differenziare, dovresti aggiungere un attributo data-action-pending.
+        downloadStyledPDF(); 
+    });
+
+
+    // EVENTI LISTE SALVATE
+    savedListsEl.addEventListener("click", async (e) => {
+        const target = e.target;
+        const action = target.dataset.action;
+        const id = target.dataset.id;
+        if (!action || !id) return;
+
+        if (action === "load") {
+            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
+            try {
+                const doc = await db.collection("liste_salvate").doc(id).get();
+                if (doc.exists) {
+                    shopping = doc.data().items || [];
+                    renderShopping();
+                    alert("Lista caricata con successo.");
+                } else {
+                    alert("Lista non trovata.");
+                }
+            } catch (err) {
+                console.error("Errore nel caricamento della lista:", err);
+                alert("Errore nel caricamento della lista.");
+            }
+        } else if (action === "delete") {
+            if (!confirm("Sei sicuro di voler eliminare questa lista salvata?")) return;
+            try {
+                await db.collection("liste_salvate").doc(id).delete();
+                alert("Lista eliminata con successo.");
+                loadLists();
+            } catch (err) {
+                console.error("Errore nell'eliminazione della lista:", err);
+                alert("Errore nell'eliminazione della lista.");
+            }
+        }
+    });
+
+
+    // EVENTO DI LOGIN
+    loginButtonEl.addEventListener("click", handleLogin);
+    inputLastNameEl.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+
+
+    // EVENTO LOGOUT
+    logoutButtonEl.addEventListener("click", handleLogout);
+}
+
 
 function initializeApp() {
     if (CURRENT_USER_ID) {
@@ -662,5 +667,10 @@ async function checkLoginStatus() {
     }
 }
 
-// Avvia l'app
-checkLoginStatus();
+
+// Avvia l'app solo quando il DOM (HTML) è completamente caricato
+document.addEventListener('DOMContentLoaded', () => {
+    getDOMElements(); // 1. Cattura tutti gli elementi DOM
+    addAllEventListeners(); // 2. Aggiunge tutti gli eventi ai pulsanti
+    checkLoginStatus(); // 3. Avvia la logica dell'app
+});

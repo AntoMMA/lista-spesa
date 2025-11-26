@@ -32,7 +32,7 @@ let actionPending = '';
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
 let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
 
-/* -------------- CATALOGO PRODOTTI -------------- */
+/* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
 // ... (Catalogo invariato, omesso per brevità)
 const catalogo = [
     // --- FRUTTA E VERDURA (Integrate) ---
@@ -111,9 +111,9 @@ const catalogo = [
     { categoria: "Succhi/Bibite", nome: "Succo d'arancia (cartone)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Succo" },
     { categoria: "Succhi/Bibite", nome: "Coca-Cola (lattine)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=Coca" },
     { categoria: "Succhi/Bibite", nome: "The freddo (limone/pesca)", imgUrl: "https://placehold.co/50x50/10B981/FFFFFF?text=The" },
-    { categoria: "Caffè/TÉ", nome: "Caffè" macinato (moka)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=Caffè¨M" },
-    { categoria: "Caffè/TÉ¨", nome: "Capsule/Cialde per caffè", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=Caffé" },
-    { categoria: "Caffè/TÉ", nome: "TÉ nero (bustine)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=TÉ" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "CaffÃ¨ macinato (moka)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffÃ¨M" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "Capsule/Cialde per caffÃ¨", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=CaffÃ¨C" },
+    { categoria: "CaffÃ¨/TÃ¨", nome: "TÃ¨ nero (bustine)", imgUrl: "https://placehold.co/50x50/701A75/FFFFFF?text=TÃ¨" },
     { categoria: "Birra", nome: "Birra Lager (confezione)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=Birra" },
     { categoria: "Vino", nome: "Vino rosso (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoR" },
     { categoria: "Vino", nome: "Vino bianco (Tavola)", imgUrl: "https://placehold.co/50x50/DC2626/FFFFFF?text=VinoB" },

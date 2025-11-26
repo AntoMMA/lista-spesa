@@ -19,7 +19,7 @@ const db = firebase.firestore();
 const dbRT = firebase.database(); 
 
 // Variabili globali
-// MODIFICATO: Inizializza l'ID per tentare il recupero dello stato salvato
+// ðŸš MODIFICATO: Inizializza l'ID per tentare il recupero dello stato salvato
 let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null; 
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 

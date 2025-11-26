@@ -1,4 +1,4 @@
-/* =================================================================
+x/* =================================================================
    FILE: script.js - Codice Aggiornato con Soluzione Persistenza & Bug Offline
    ================================================================= */
 
@@ -68,6 +68,7 @@ const catalogo = [
     { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Orata" },
     { categoria: "Pesce in scatola", nome: "Tonno sott'olio (scatola)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Tonno" },
     { categoria: "Pesce in scatola", nome: "Sgombro in scatola", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Sgomb" },
+    { categoria: "Carne Rossa", nome: "Hamburger", imgUrl:"https://share.google/7XCOA7CE91RAA3hQ7" },
 
     // --- SURGELATI (Estesa) ---
     { categoria: "Surgelati (Verdura)", nome: "Piselli fini (sacchetto)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Piselli" },

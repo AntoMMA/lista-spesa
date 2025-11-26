@@ -57,7 +57,7 @@ const catalogo = [
     { categoria: "Aromi/Erbe", nome: "Prezzemolo (mazzetto)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Prezz" },
     
     // --- CARNE E PESCE (Integrate) ---
-    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Manzo" },
+    { categoria: "Carne rossa", nome: "Hamburger", imgUrl: "https://share.google/7XCOA7CE91RAA3hQ7" },
     { categoria: "Carne rossa", nome: "Carne macinata (bovino)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Maci" },
     { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Pollo" },
     { categoria: "Carne bianca", nome: "Cosce di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cosce" },
@@ -68,7 +68,6 @@ const catalogo = [
     { categoria: "Pesce fresco", nome: "Orata", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Orata" },
     { categoria: "Pesce in scatola", nome: "Tonno sott'olio (scatola)", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Tonno" },
     { categoria: "Pesce in scatola", nome: "Sgombro in scatola", imgUrl: "https://placehold.co/50x50/1D4ED8/FFFFFF?text=Sgomb" },
-    { categoria: "Carne Rossa", nome: "Hamburger", imgUrl:"https://share.google/7XCOA7CE91RAA3hQ7" },
 
     // --- SURGELATI (Estesa) ---
     { categoria: "Surgelati (Verdura)", nome: "Piselli fini (sacchetto)", imgUrl: "https://placehold.co/50x50/14B8A6/FFFFFF?text=Piselli" },

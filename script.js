@@ -57,7 +57,7 @@ const catalogo = [
     { categoria: "Aromi/Erbe", nome: "Prezzemolo (mazzetto)", imgUrl: "https://placehold.co/50x50/065F46/FFFFFF?text=Prezz" },
     
     // --- CARNE E PESCE (Integrate) ---
-    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://t4.ftcdn.net/jpg/09/75/54/39/360_F_975543950_HVDVBrH9nCP0QTmo6lHKWQvFcNbKqRBg.jpg" },
+    { categoria: "Carne rossa", nome: "Bistecca di manzo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Manzo" },
     { categoria: "Carne rossa", nome: "Carne macinata (bovino)", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Maci" },
     { categoria: "Carne bianca", nome: "Petto di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Pollo" },
     { categoria: "Carne bianca", nome: "Cosce di pollo", imgUrl: "https://placehold.co/50x50/EF4444/FFFFFF?text=Cosce" },

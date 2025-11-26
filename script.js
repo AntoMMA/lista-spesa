@@ -307,7 +307,7 @@ function handleLogout() {
     localStorage.removeItem("user_unique_id");
     
     loginGateEl.style.display = 'flex';
-    mainAppEl.style.display = 'flex';
+    mainAppEl.style.display = 'none';
     if(loggedInUserEl) loggedInUserEl.textContent = "Offline";
 }
 

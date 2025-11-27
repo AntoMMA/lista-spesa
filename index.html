@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista Spesa Condivisa - Realtime - 2025/2026 - by Warrior Real</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+    <div class="login-gate" id="loginGate">
+        <div class="rainbow-border" style="padding: 20px; border-radius: 10px;">
+            <h2>Accedi alla Lista Spesa</h2>
+            <input type="text" id="inputFirstName" placeholder="Nome">
+            <input type="text" id="inputLastName" placeholder="Cognome">
+            <button class="button" id="loginButton">Accedi / Registrati</button>
+            <p class="subtitle" style="margin-top: 20px;">I tuoi dati verranno salvati per la sincronizzazione.</p>
+        </div>
+    </div>
+
+    <div class="app" id="mainApp" style="display: none;">
+
+        <div class="app-header">
+            <h1>Lista Spesa Condivisa - Realtime - 2025/2026 - by Warrior Real</h1>
+            <div class="user-info">
+                <span>Utente: <strong id="loggedInUser"></strong></span>
+                <button class="button danger" id="logoutButton">Esci</button>
+            </div>
+        </div>
+        
+        <div class="content">
+
+            <div class="catalog">
+                <h2>Catalogo Prodotti</h2>
+                
+                <div class="search-container">
+                    <input type="search" id="searchInput" placeholder="🔍 Cerca prodotto o categoria...">
+                </div>
+                
+                <div class="catalog-list" id="catalogList">
+                </div>
+                
+                <div class="add-manual">
+                    <input type="text" id="manualInput" placeholder="Aggiungi item manuale">
+                    <button class="button" id="addManualBtn">Aggiungi</button>
+                </div>
+            </div>
+
+            <div class="list-area">
+                <h2>Lista Attuale <small>(<span id="itemCount">0</span> items)</small></h2>
+
+                <div class="list-controls">
+                    <span>Funzioni Lista:</span>
+                    <div class="actions">
+                        <button class="button danger" id="clearBtn">Svuota Lista</button>
+                        <button class="button" id="saveBtn">Salva Lista</button>
+                    </div>
+                </div>
+
+                <!-- lista singola con id corretto -->
+                <ul id="shoppingItems"></ul>
+
+                <h3 style="margin-top: 20px;">Storico Personale 
+                    <button class="button" id="toggleHistoryBtn" style="font-size: 0.8em; padding: 5px 10px;">Mostra/Nascondi</button>
+                </h3>
+                
+                <div id="personalHistoryGate" style="display: none; border: 1px solid #475569; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                    <p class="subtitle">Salva la spesa appena fatta con i costi.</p>
+                    
+                    <input type="number" step="0.01" id="inputTotalCost" placeholder="Importo Totale (€)">
+                    <input type="text" id="inputPurchaseNote" placeholder="Breve descrizione (es. Spesa Settimanale)">
+                    <button class="button" id="savePurchaseBtn">💠 Salva Spesa Fatta</button>
+                    
+                    <hr style="border: 0; border-top: 1px solid #475569; margin: 15px 0;">
+                    
+                    <h4>Il mio Storico</h4>
+                    <div id="personalHistoryList" style="max-height: 200px; overflow-y: auto;">
+                        <p class="muted">Caricamento...</p>
+                    </div>
+                </div>
+                <h3>Liste Salvate <button class="button" id="loadBtn">Ricarica Liste</button></h3>
+
+                <div id="savedLists"></div>
+
+                <div class="bottom-actions">
+                    <button class="button" id="downloadBtn">Scarica PDF</button>
+                    <button class="button" id="shareBtn">Condividi</button>
+                </div>
+
+                <div id="pdfNoteContainer" style="display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px;">
+                    <p class="subtitle" style="margin-bottom: 5px;">Aggiungi una nota al PDF/Condivisione:</p>
+                    <input type="text" id="pdfNoteInput" placeholder="Esempio: Non dimenticare il gelato!">
+                    <button class="button" id="pdfNoteConfirmBtn">Conferma Azione</button>
+                </div>
+
+            </div>
+
+            <div class="user-area">
+                <h2>Utenti Registrati</h2>
+                <ul id="activeUsersList"></ul>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="pdfPrintArea" style="position: absolute;top:-9999px;width: 350px; 
+        /* Larghezza direndering fissa per lo stile mobile */
+        background: #fafafa;padding: 10px;z-index: -1; ">
+    </div>
+
+    <footer class="app-footer">
+        <p>&copy; Web App Lista Spesa creato da - Warrior Real. Tutti i diritti riservati.</p>
+    </footer>
+    <script src="script.js"></script>
+</body>
+</html>

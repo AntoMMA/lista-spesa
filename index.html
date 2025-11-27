@@ -65,7 +65,29 @@
                 <ul id="shoppingItems">
                     </ul>
 
+                <ul id="shoppingItems">
+                    </ul>
+
+                <h3 style="margin-top: 20px;">Storico Personale 
+                    <button class="button" id="toggleHistoryBtn" style="font-size: 0.8em; padding: 5px 10px;">Mostra/Nascondi</button>
+                </h3>
+                
+                <div id="personalHistoryGate" style="display: none; border: 1px solid #475569; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                    <p class="subtitle">Salva la spesa appena fatta con i costi.</p>
+                    
+                    <input type="number" step="0.01" id="inputTotalCost" placeholder="Importo Totale (€)">
+                    <input type="text" id="inputPurchaseNote" placeholder="Breve descrizione (es. Spesa Settimanale)">
+                    <button class="button" id="savePurchaseBtn">💰 Salva Spesa Fatta</button>
+                    
+                    <hr style="border: 0; border-top: 1px solid #475569; margin: 15px 0;">
+                    
+                    <h4>Il mio Storico</h4>
+                    <div id="personalHistoryList" style="max-height: 200px; overflow-y: auto;">
+                        <p class="muted">Caricamento...</p>
+                    </div>
+                </div>
                 <h3>Liste Salvate <button class="button" id="loadBtn">Ricarica Liste</button></h3>
+
                 <div id="savedLists">
                     </div>
 

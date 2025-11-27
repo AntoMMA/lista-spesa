@@ -401,6 +401,31 @@ ul#shoppingItems li .left span {
     overflow-y: auto;
 }
 
+/* style.css (dopo #savedLists) */
+/* Stile per i nuovi input nella sezione storico */
+#inputTotalCost, #inputPurchaseNote {
+    margin-bottom: 10px;
+}
+#savePurchaseBtn {
+    width: 100%;
+    background-color: #f59e0b; /* Giallo/Arancione per il denaro */
+}
+#savePurchaseBtn:hover {
+    background-color: #d97706;
+}
+
+#personalHistoryList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 5px;
+}
+/* Aggiungi stili per il saved-list-item per renderizzare bene lo storico personale */
+#personalHistoryList .saved-list-item {
+    flex-direction: column; 
+    align-items: flex-start;
+}
+
 .saved-list-item {
     display: flex;
     justify-content: space-between;

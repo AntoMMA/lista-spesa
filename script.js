@@ -24,13 +24,18 @@ let CURRENT_USER_ID = localStorage.getItem("user_unique_id") || null;
 let CURRENT_USER_DATA = { firstName: "", lastName: "" };
 const USER_COLLECTION_NAME = "registered_users"; 
 const FREQUENT_PRODUCTS_COLLECTION = "prodotti_frequenti"; 
+const PERSONAL_HISTORY_COLLECTION = "storico_spese"; // 👈 NUOVA COSTANTE
 
 let pdfNote = ""; 
 let shopping = []; 
 let actionPending = '';
 
+
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
 let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
+
+// 👈 NUOVE VARIABILI DOM DELLO STORICO
+let toggleHistoryBtnEl, personalHistoryGateEl, inputTotalCostEl, inputPurchaseNoteEl, savePurchaseBtnEl,
 
 /* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
 // ... (Catalogo invariato, omesso per brevità)
@@ -229,8 +234,8 @@ async function initializeApp() {
 
     renderShopping();
     loadLists(); 
-}
-
+    loadPersonalHistory();
+    }
 /* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Modificate per Persistenza/Stato) -------------- */
 
 /**
@@ -555,6 +560,110 @@ function handleListClick(e) {
     renderShopping();
 }
 
+/* -------------- NUOVE FUNZIONI STORICO PERSONALE (Importo Pagato) -------------- */
+
+/**
+ * Salva la lista corrente (solo gli item) nello storico personale con il costo e la nota.
+ */
+async function savePersonalPurchase() {
+    if (shopping.length === 0 || !CURRENT_USER_ID) {
+        alert("Lista spesa vuota o non sei loggato.");
+        return;
+    }
+
+    const totalCost = parseFloat(inputTotalCostEl.value);
+    const purchaseNote = inputPurchaseNoteEl.value.trim();
+    
+    if (isNaN(totalCost) || totalCost <= 0) {
+        alert("Per salvare la spesa, inserisci un importo totale valido.");
+        return;
+    }
+
+    if (!purchaseNote) {
+         if (!confirm("Non hai inserito una descrizione. Vuoi continuare comunque?")) return;
+    }
+
+    try {
+        // Salva solo gli item che sono stati marcati come 'fatti' (done)
+        const completedItems = shopping.filter(item => item.done).map(item => ({
+            nome: item.nome,
+            qty: item.qty,
+            imgUrl: item.imgUrl
+        }));
+        
+        const payload = {
+            userId: CURRENT_USER_ID,
+            userName: `${CURRENT_USER_DATA.firstName} ${CURRENT_USER_DATA.lastName}`,
+            totalCost: totalCost,
+            note: purchaseNote,
+            items: completedItems, 
+            itemsCount: completedItems.length,
+            date: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection(PERSONAL_HISTORY_COLLECTION).add(payload);
+        
+        // Pulizia e aggiornamento
+        inputTotalCostEl.value = '';
+        inputPurchaseNoteEl.value = '';
+        
+        alert(`Spesa di €${totalCost.toFixed(2)} salvata nel tuo storico personale.`);
+        loadPersonalHistory(); 
+    } catch (err) {
+        console.error("Errore nel salvataggio della spesa personale:", err);
+        alert("Errore nel salvataggio dello storico. Controlla la connessione.");
+    }
+}
+
+/**
+ * Carica e renderizza lo storico delle spese per l'utente loggato.
+ */
+async function loadPersonalHistory() {
+    if (!CURRENT_USER_ID) {
+        if(personalHistoryListEl) personalHistoryListEl.innerHTML = '<p class="muted">Accedi per vedere lo storico delle tue spese.</p>';
+        return;
+    }
+    
+    try {
+        const snapshot = await db.collection(PERSONAL_HISTORY_COLLECTION)
+            .where("userId", "==", CURRENT_USER_ID) // Filtra per l'utente corrente
+            .orderBy("date", "desc")
+            .limit(10)
+            .get();
+        
+        let html = '';
+        
+        if (snapshot.empty) {
+            html = '<p class="muted">Nessuna spesa salvata nel tuo storico.</p>';
+        } else {
+            snapshot.forEach(doc => {
+                const data = doc.data();
+                // Gestione del timestamp in caso di dati locali o non sincronizzati
+                const date = data.date ? (data.date.toDate ? data.date.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta') : 'Data sconosciuta';
+                const cost = data.totalCost.toFixed(2);
+                
+                html += `<div class="saved-list-item" style="flex-direction: column; align-items: flex-start;">
+                            <span class="list-name" style="font-size: 1.1em; font-weight: bold;">
+                                €${cost} <small style="font-weight: normal; color: #aaa;">(${data.itemsCount} item)</small>
+                            </span>
+                            <span class="muted-small" style="font-size: 0.9em; margin-top: 5px;">
+                                ${data.note || 'Nessuna nota'}
+                            </span>
+                            <span class="muted-small" style="font-size: 0.8em; color: var(--primary-color);">
+                                Acquistato il ${date}
+                            </span>
+                        </div>`;
+            });
+        }
+        
+        if(personalHistoryListEl) personalHistoryListEl.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore nel caricamento dello storico spese:", err);
+        if(personalHistoryListEl) personalHistoryListEl.innerHTML = '<p class="muted">Errore nel caricamento dello storico.</p>';
+    }
+}
+
 /* -------------- FUNZIONI SALVATAGGIO/CARICAMENTO FIRESTORE (Invariate) -------------- */
 // ... (saveList, loadLists, generateStyledListHTML, downloadStyledPDF, sharePDF invariate, omesse per brevità)
 async function saveList() {
@@ -868,6 +977,7 @@ function listenToActiveList() {
 
 /* -------------- GESTIONE EVENTI E AVVIO IN SICUREZZA (Modificate per Persistenza) -------------- */
 
+// script.js (AGGIORNATO)
 function getDOMElements() {
     // Funzione per ottenere tutti gli elementi DOM necessari
     loginGateEl = document.getElementById("loginGate");
@@ -897,8 +1007,17 @@ function getDOMElements() {
     downloadBtnEl = document.getElementById("downloadBtn");
     shareBtnEl = document.getElementById("shareBtn");
     
+    // 💰 NUOVE VARIABILI DOM DELLO STORICO 👈
+    toggleHistoryBtnEl = document.getElementById("toggleHistoryBtn");
+    personalHistoryGateEl = document.getElementById("personalHistoryGate");
+    inputTotalCostEl = document.getElementById("inputTotalCost");
+    inputPurchaseNoteEl = document.getElementById("inputPurchaseNote");
+    savePurchaseBtnEl = document.getElementById("savePurchaseBtn");
+    personalHistoryListEl = document.getElementById("personalHistoryList");
+    
     return true; 
 }
+
 
 function addAllEventListeners() {
     // EVENTI APP
@@ -985,15 +1104,37 @@ function addAllEventListeners() {
     });
 
     // EVENTI LOGIN/LOGOUT
+    // script.js (AGGIORNATO)
+    // EVENTI LOGIN/LOGOUT
     loginButtonEl.addEventListener("click", handleLogin);
     inputLastNameEl.addEventListener("keypress", (e) => {
         if (e.key === 'Enter') handleLogin();
     });
     logoutButtonEl.addEventListener("click", handleLogout);
 
+    // 💰 NUOVI EVENTI STORICO SPESA 👈
+    toggleHistoryBtnEl.addEventListener("click", () => {
+        if (personalHistoryGateEl.style.display === 'none') {
+            personalHistoryGateEl.style.display = 'block';
+            loadPersonalHistory(); // Ricarica lo storico ogni volta che viene aperto
+        } else {
+            personalHistoryGateEl.style.display = 'none';
+        }
+    });
+    
+    savePurchaseBtnEl.addEventListener("click", savePersonalPurchase);
+    // L'invio con Enter sul campo costo
+    inputTotalCostEl.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') savePersonalPurchase();
+    });
+    inputPurchaseNoteEl.addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') savePersonalPurchase();
+    });
+
     // ðŸš NUOVO: Listener per la chiusura della pagina
     window.addEventListener('beforeunload', handleBeforeUnload);
 }
+
 
 
 async function checkLoginStatus() {

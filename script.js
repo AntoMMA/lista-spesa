@@ -253,6 +253,62 @@ async function initializeApp() {
     loadLists(); 
 }
 
+async function sendListToUser(targetUserId, targetName) {
+    await db.collection("liste_inviate").add({
+        fromUserId: CURRENT_USER_ID,
+        fromName: CURRENT_USER_NAME,
+        toUserId: targetUserId,
+        toName: targetName,
+        items: shopping,
+        createdAt: new Date(),
+        status: "pending"
+    });
+
+    alert("Lista inviata!");
+}
+
+async function loadReceivedLists() {
+    const snap = await db.collection("liste_inviate")
+        .where("toUserId", "==", CURRENT_USER_ID)
+        .orderBy("createdAt", "desc")
+        .get();
+
+    let html = "";
+    snap.forEach(doc => {
+        const d = doc.data();
+        html += `
+        <div class="received-item">
+            <strong>${d.fromName} ti ha inviato una lista</strong>
+            <button onclick="acceptList('${doc.id}')">Accetta</button>
+            <button onclick="rejectList('${doc.id}')">Rifiuta</button>
+        </div>`;
+    });
+
+    document.getElementById("receivedLists").innerHTML = html;
+}
+
+async function acceptList(id) {
+    const docRef = db.collection("liste_inviate").doc(id);
+    const snap = await docRef.get();
+    const data = snap.data();
+
+    shopping = data.items;
+    renderShopping();
+
+    await docRef.update({ status: "accepted" });
+
+    alert("Lista accettata e caricata!");
+}
+
+async function rejectList(id) {
+    await db.collection("liste_inviate").doc(id).update({
+        status: "rejected"
+    });
+
+    alert("Lista rifiutata.");
+}
+
+
 /* -------------- FUNZIONI UTENTE E AUTENTICAZIONE (Modificate per Persistenza/Stato) -------------- */
 
 /**
@@ -488,10 +544,11 @@ async function handleSearch() {
 /* -------------- FUNZIONI LISTA SPESA (addItem MODIFICATA) -------------- */
 
 function renderShopping() {
-    const sortedShopping = [...shopping].sort((a, b) => {
-        if (a.done === b.done) return 0;
-        return a.done ? 1 : -1;
-    });
+    // salva la lista per utente
+    if (CURRENT_USER_ID) {
+        localStorage.setItem(`shopping_${CURRENT_USER_ID}`, JSON.stringify(shopping));
+    }
+}
 
     shoppingItemsEl.innerHTML = sortedShopping.map((item) => {
         const itemClass = item.done ? 'done' : '';
@@ -609,35 +666,41 @@ async function saveList() {
 // ------------------ Load lists aggiornata (supporto "Storico Personale") ------------------
 async function loadLists({ personalOnly = true } = {}) {
     try {
-        // Se vogliamo lo storico personale ma non siamo loggati => chiedi login o fallback
-        if (personalOnly && !CURRENT_USER_ID) {
-            // Fallback: mostra comunque le ultime 10 liste globali informando l'utente
-            console.warn("Utente non loggato: visualizzo le ultime liste pubbliche (storico personale richiede login).");
-            const snapshotGlobal = await db.collection("liste_salvate")
-                .orderBy("createdAt", "desc")
-                .limit(10)
-                .get();
-
-            if (snapshotGlobal.empty) {
-                savedListsEl.innerHTML = '<p class="muted">Nessuna lista salvata trovata.</p>';
-                return;
-            }
-
-            let htmlGlobal = '';
-            snapshotGlobal.forEach(doc => {
-                const docData = doc.data();
-                const date = docData.createdAt ? docData.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
-                htmlGlobal += `<div class="saved-list-item" data-id="${doc.id}">
-                                <span class="list-name">${escapeHtml(docData.name || "—")}</span>
-                                <span class="muted-small">Salvata da: ${escapeHtml(docData.userName || "Anonimo")} il ${date}</span>
-                                <div class="actions">
-                                  <button data-action="load" data-id="${doc.id}">Carica</button>
-                                </div>
-                              </div>`;
-            });
-            savedListsEl.innerHTML = htmlGlobal;
+        if (!CURRENT_USER_ID) {
+            savedListsEl.innerHTML = `<p>Devi effettuare il login.</p>`;
             return;
         }
+
+        const queryRef = db.collection("liste_salvate")
+            .where("userId", "==", CURRENT_USER_ID)
+            .orderBy("createdAt", "desc");
+
+        const snapshot = await queryRef.get();
+
+        if (snapshot.empty) {
+            savedListsEl.innerHTML = `<p>Nessuna lista trovata.</p>`;
+            return;
+        }
+
+        let html = "";
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            html += `
+            <div class="saved-list-item">
+                <strong>${data.name}</strong>
+                <div>Data: ${data.createdAt.toDate().toLocaleString()}</div>
+                <button onclick="loadListById('${doc.id}')">Carica</button>
+                <button onclick="deleteList('${doc.id}')">Elimina</button>
+            </div>
+            `;
+        });
+
+        savedListsEl.innerHTML = html;
+
+    } catch (err) {
+        console.error("Errore loadLists:", err);
+    }
+}
 
         // Se siamo loggati e vogliamo solo il personale -> filtra per userId
         let queryRef;
@@ -983,27 +1046,6 @@ function getDOMElements() {
     shareBtnEl = document.getElementById("shareBtn");
     
     return true; 
-}
-
-// =========================
-//  STORICO PERSONALE
-// =========================
-let personalHistoryVisible = false;
-
-const togglePersonalHistoryBtn = document.getElementById("togglePersonalHistoryBtn");
-
-if (togglePersonalHistoryBtn) {
-    togglePersonalHistoryBtn.addEventListener("click", async () => {
-        personalHistoryVisible = !personalHistoryVisible;
-
-        if (personalHistoryVisible) {
-            togglePersonalHistoryBtn.textContent = "Storico Personale: Nascondi";
-            await loadLists({ personalOnly: true });
-        } else {
-            togglePersonalHistoryBtn.textContent = "Storico Personale: Mostra";
-            savedListsEl.innerHTML = "";
-        }
-    });
 }
 
 function addAllEventListeners() {

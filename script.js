@@ -30,7 +30,29 @@ let shopping = [];
 let actionPending = '';
 
 /* -------------- VARIABILI DOM (Elementi HTML) -------------- */
-let loginGateEl, mainAppEl, loginButtonEl, inputFirstNameEl, inputLastNameEl, loggedInUserEl, logoutButtonEl, catalogListEl, shoppingItemsEl, itemCountEl, addManualInputEl, addManualBtnEl, clearBtnEl, saveBtnEl, loadBtnEl, savedListsEl, activeUsersListEl, pdfNoteContainerEl, pdfNoteInputEl, pdfNoteConfirmBtnEl, downloadBtnEl, shareBtnEl, searchInputEl; 
+let loginGateEl, 
+mainAppEl, 
+loginButtonEl, 
+inputFirstNameEl, 
+inputLastNameEl, 
+loggedInUserEl, 
+logoutButtonEl, 
+catalogListEl, 
+shoppingItemsEl, 
+itemCountEl, 
+addManualInputEl, 
+addManualBtnEl, 
+clearBtnEl, 
+saveBtnEl, 
+loadBtnEl, 
+savedListsEl, 
+activeUsersListEl, 
+pdfNoteContainerEl, 
+pdfNoteInputEl, 
+pdfNoteConfirmBtnEl, 
+downloadBtnEl, 
+shareBtnEl, 
+searchInputEl; 
 
 /* -------------- CATALOGO PRODOTTI ESTESO E AGGIORNATO (INVARIATO) -------------- */
 // ... (Catalogo invariato, omesso per brevità)
@@ -961,6 +983,27 @@ function getDOMElements() {
     shareBtnEl = document.getElementById("shareBtn");
     
     return true; 
+}
+
+// =========================
+//  STORICO PERSONALE
+// =========================
+let personalHistoryVisible = false;
+
+const togglePersonalHistoryBtn = document.getElementById("togglePersonalHistoryBtn");
+
+if (togglePersonalHistoryBtn) {
+    togglePersonalHistoryBtn.addEventListener("click", async () => {
+        personalHistoryVisible = !personalHistoryVisible;
+
+        if (personalHistoryVisible) {
+            togglePersonalHistoryBtn.textContent = "Storico Personale: Nascondi";
+            await loadLists({ personalOnly: true });
+        } else {
+            togglePersonalHistoryBtn.textContent = "Storico Personale: Mostra";
+            savedListsEl.innerHTML = "";
+        }
+    });
 }
 
 function addAllEventListeners() {

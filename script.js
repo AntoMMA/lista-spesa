@@ -584,36 +584,99 @@ async function saveList() {
     }
 }
 
-async function loadLists() {
+// ------------------ Load lists aggiornata (supporto "Storico Personale") ------------------
+async function loadLists({ personalOnly = true } = {}) {
     try {
-        const snapshot = await db.collection("liste_salvate").orderBy("createdAt", "desc").limit(10).get();
-        let html = '';
+        // Se vogliamo lo storico personale ma non siamo loggati => chiedi login o fallback
+        if (personalOnly && !CURRENT_USER_ID) {
+            // Fallback: mostra comunque le ultime 10 liste globali informando l'utente
+            console.warn("Utente non loggato: visualizzo le ultime liste pubbliche (storico personale richiede login).");
+            const snapshotGlobal = await db.collection("liste_salvate")
+                .orderBy("createdAt", "desc")
+                .limit(10)
+                .get();
 
+            if (snapshotGlobal.empty) {
+                savedListsEl.innerHTML = '<p class="muted">Nessuna lista salvata trovata.</p>';
+                return;
+            }
+
+            let htmlGlobal = '';
+            snapshotGlobal.forEach(doc => {
+                const docData = doc.data();
+                const date = docData.createdAt ? docData.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
+                htmlGlobal += `<div class="saved-list-item" data-id="${doc.id}">
+                                <span class="list-name">${escapeHtml(docData.name || "—")}</span>
+                                <span class="muted-small">Salvata da: ${escapeHtml(docData.userName || "Anonimo")} il ${date}</span>
+                                <div class="actions">
+                                  <button data-action="load" data-id="${doc.id}">Carica</button>
+                                </div>
+                              </div>`;
+            });
+            savedListsEl.innerHTML = htmlGlobal;
+            return;
+        }
+
+        // Se siamo loggati e vogliamo solo il personale -> filtra per userId
+        let queryRef;
+        if (personalOnly) {
+            queryRef = db.collection("liste_salvate")
+                         .where("userId", "==", CURRENT_USER_ID)
+                         .orderBy("createdAt", "desc")
+                         .limit(50); // mostra fino a 50 voci personali
+        } else {
+            queryRef = db.collection("liste_salvate")
+                         .orderBy("createdAt", "desc")
+                         .limit(10);
+        }
+
+        const snapshot = await queryRef.get();
         if (snapshot.empty) {
             savedListsEl.innerHTML = '<p class="muted">Nessuna lista salvata trovata.</p>';
             return;
         }
 
+        let html = '';
         snapshot.forEach(doc => {
-            const data = doc.data();
-            const date = data.createdAt ? data.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
-            html += `<div class="saved-list-item">
-                        <span class="list-name">${data.name}</span>
-                        <span class="muted-small">Salvata da: ${data.userName} il ${date}</span>
+            const dataDoc = doc.data();
+            const date = dataDoc.createdAt ? dataDoc.createdAt.toDate().toLocaleDateString("it-IT") : 'Data sconosciuta';
+            // bottone delete mostrato solo se la lista appartiene all'utente corrente
+            const canDelete = (dataDoc.userId && CURRENT_USER_ID && dataDoc.userId === CURRENT_USER_ID);
+            html += `<div class="saved-list-item" data-id="${doc.id}">
+                        <span class="list-name">${escapeHtml(dataDoc.name || "—")}</span>
+                        <span class="muted-small">Salvata da: ${escapeHtml(dataDoc.userName || "Anonimo")} il ${date}</span>
                         <div class="actions">
-                            <button data-action="load" data-id="${doc.id}">Carica</button>
-                            <button data-action="delete" data-id="${doc.id}" class="danger">Elimina</button>
+                          <button data-action="load" data-id="${doc.id}">Carica</button>
+                          ${canDelete ? `<button data-action="delete" data-id="${doc.id}">Elimina</button>` : ''}
                         </div>
-                    </div>`;
+                      </div>`;
         });
 
         savedListsEl.innerHTML = html;
 
     } catch (err) {
-        console.error("Errore nel caricamento delle liste salvate:", err);
-        savedListsEl.innerHTML = '<p class="muted">Errore nel caricamento. Problema di rete o Firestore.</p>';
+        console.error("Errore in loadLists():", err);
+        // Se Firestore chiede un indice composito, lo riportiamo all'utente (utile durante sviluppo)
+        if (err.code === 'failed-precondition' || /requires an index/i.test(err.message)) {
+            alert("Firestore richiede la creazione di un indice per questa query. Apri la console Firebase e crea l'indice richiesto (vedi log).");
+            console.warn("Dettaglio errore Firestore (potrebbe richiedere indice composito):", err);
+        } else {
+            alert("Errore nel recupero delle liste. Controlla la console per maggiori dettagli.");
+        }
     }
 }
+
+// funzioni di utilità
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 
 
 /* -------------- FUNZIONI PDF e CONDIVISIONE (AGGIORNATE PER STILE) -------------- */
@@ -959,30 +1022,48 @@ function addAllEventListeners() {
     
     // EVENTI LISTE SALVATE 
     savedListsEl.addEventListener("click", async (e) => {
-        const target = e.target;
-        const action = target.dataset.action;
-        const id = target.dataset.id;
-        if (!action || !id) return;
-    
-        if (action === "load") {
-            if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
-            try {
-                const doc = await db.collection("liste_salvate").doc(id).get();
-                if (doc.exists) {
-                    shopping = doc.data().items || [];
-                    renderShopping();
-                    alert("Lista caricata con successo.");
-                } else { alert("Lista non trovata."); }
-            } catch (err) { console.error("Errore nel caricamento della lista:", err); alert("Errore nel caricamento della lista."); }
-        } else if (action === "delete") {
-            if (!confirm("Sei sicuro di voler eliminare questa lista salvata?")) return;
-            try {
-                await db.collection("liste_salvate").doc(id).delete();
-                alert("Lista eliminata con successo.");
-                loadLists();
-            } catch (err) { console.error("Errore nell'eliminazione della lista:", err); alert("Errore nell'eliminazione della lista."); }
+    const target = e.target;
+    const action = target.dataset.action;
+    const id = target.dataset.id;
+    if (!action || !id) return;
+
+    if (action === "load") {
+        if (!id) return;
+        if (shopping.length > 0 && !confirm("Caricando una nuova lista, quella corrente verrà sovrascritta. Continuare?")) return;
+        try {
+            const doc = await db.collection("liste_salvate").doc(id).get();
+            if (doc.exists) {
+                shopping = doc.data().items || [];
+                renderShopping();
+                alert("Lista caricata con successo.");
+            } else {
+                alert("Lista non trovata.");
+            }
+        } catch (err) {
+            console.error("Errore nel caricamento della lista:", err);
+            alert("Errore nel caricamento della lista. Controlla la console.");
         }
-    });
+    } else if (action === "delete") {
+        // Verifica permessi (solo proprietario può cancellare)
+        if (!CURRENT_USER_ID) { alert("Devi essere loggato per eliminare una lista."); return; }
+        try {
+            const docSnapshot = await db.collection("liste_salvate").doc(id).get();
+            if (!docSnapshot.exists) { alert("Lista non trovata."); return; }
+            const dataDoc = docSnapshot.data();
+            if (dataDoc.userId !== CURRENT_USER_ID) { alert("Non puoi eliminare una lista che non è tua."); return; }
+
+            if (!confirm("Sei sicuro di voler eliminare questa lista salvata?")) return;
+            await db.collection("liste_salvate").doc(id).delete();
+            alert("Lista eliminata con successo.");
+            // ricarica lo storico personale
+            await loadLists({ personalOnly: true });
+        } catch (err) {
+            console.error("Errore durante l'eliminazione:", err);
+            alert("Errore durante l'eliminazione della lista. Controlla la console.");
+        }
+    }
+});
+
 
     // EVENTI LOGIN/LOGOUT
     loginButtonEl.addEventListener("click", handleLogin);

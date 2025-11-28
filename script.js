@@ -422,7 +422,7 @@ async function savePersonalPurchase() {
         note: purchaseNote || "",
         items: completedItems,
         itemsCount: completedItems.length,
-        date: firebase.firestore.FieldValue.serverTimestamp()
+        date: firebase.firestore.Timestamp.now()
     };
 
     try {

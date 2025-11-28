@@ -999,6 +999,7 @@ function getDOMElements() {
     saveBtnEl = document.getElementById("saveBtn");
     loadBtnEl = document.getElementById("loadBtn");
     savedListsEl = document.getElementById("savedLists");
+    personalHistoryListEl = document.getElementById("personalHistoryList");
     
     activeUsersListEl = document.getElementById("activeUsersList");
     pdfNoteContainerEl = document.getElementById("pdfNoteContainer");
